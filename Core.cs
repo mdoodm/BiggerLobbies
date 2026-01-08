@@ -4,6 +4,7 @@ using MelonLoader;
 
 [assembly: MelonInfo(typeof(BiggerLobbies.Core), Constants.MOD_NAME, Constants.MOD_VERSION, Constants.MOD_AUTHOR)]
 [assembly: MelonGame(Constants.Game.GAME_STUDIO, Constants.Game.GAME_NAME)]
+[assembly: MelonIncompatibleAssemblies("ModManager&PhoneApp")]
 
 namespace BiggerLobbies
 {
