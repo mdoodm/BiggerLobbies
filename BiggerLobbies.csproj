@@ -893,6 +893,8 @@
 	  <Compile Include="Integrations\Il2CppLobbyPatches.cs" />
 	  <Compile Include="Integrations\LobbyDedupePatches.cs" />
 	  <Compile Include="Integrations\DiagnosticPatches.cs" />
+	  <Compile Include="Integrations\AutoSave.cs" />
+	  <Compile Include="Integrations\GrowSyncFix.cs" />
 	  <Compile Include="Utils\Constants.cs" />
 	</ItemGroup>
 

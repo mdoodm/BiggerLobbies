@@ -6,7 +6,7 @@
         /// Mod information
         /// </summary>
         public const string MOD_NAME = "BiggerLobbies";
-        public const string MOD_VERSION = "1.0.3";
+        public const string MOD_VERSION = "1.0.4";
         public const string MOD_AUTHOR = "Bars";
 
         /// <summary>

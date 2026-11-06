@@ -16,7 +16,17 @@ namespace BiggerLobbies
         {
             Instance = this;
             HarmonyPatches.SetModInstance(this);
+#if !MONO
+            AutoSave.Init();
+#endif
         }
+
+#if !MONO
+        public override void OnUpdate()
+        {
+            AutoSave.Update();
+        }
+#endif
 
         public override void OnApplicationQuit()
         {
