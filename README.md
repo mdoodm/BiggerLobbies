@@ -9,9 +9,16 @@ This is a fork of [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies
 - Raises the lobby size from 4 to 20 players
 - Adds extra player slots to the lobby screen and shows the count as `Lobby (n/20)`
 - Keeps the Invite button available until the lobby has 20 players
-- Fixes a bug where a joining player and the host ended up in two different Steam lobbies (see [What changed in 1.0.3](#what-changed-in-103))
-- **Host autosave:** saves the game every 5 minutes so a crash doesn't wipe progress back to the last sleep (see [What changed in 1.0.4](#what-changed-in-104))
-- **Plant sync:** keeps pot water levels and growth % the same for every player, so clients don't see a wrong "needs water" icon or frozen growth
+
+## Additions in this fork
+
+- **Game 0.4.7 support** for the Il2Cpp build
+- **Invites past 4 players:** opens the Steam invite window for players 5 to 20
+- **One lobby per host:** only one Steam lobby is created at a time, and the invite window opens once the lobby is ready, so friends always join the host's lobby
+- **Host autosave:** saves the game every 5 minutes, so a crash only loses the last few minutes instead of everything since the last sleep
+- **Plant sync:** the host sends pot water levels and growth % to every player, so everyone sees the same "needs water" icon and growth progress
+- **Settings** for autosave and plant sync (see [Settings](#settings))
+- **Diagnostic logging** of the lobby and join flow (`[diag]` lines in the log)
 
 ## Compatibility
 
@@ -71,7 +78,7 @@ That MelonLoader install is too old for game 0.4.7. Update to v0.7.3, then delet
 If you use r2modman, also check you launched with **Start modded** and not from Steam. Launching from Steam loads the MelonLoader in the game folder, which may be a different, older install.
 
 **Friends show up in the lobby on their screen but not on yours, or stay in the menu when you load in**
-That was the duplicate-lobby bug fixed in 1.0.3. Check the log starts with `BiggerLobbies v1.0.3`. When you host, the log should show one lobby ID in `Lobby <id> created with 20 slots`. If a second ID appears, open an issue and include the full log.
+Check the log starts with `BiggerLobbies v1.0.3` or later. When you host, the log should show one lobby ID in `Lobby <id> created with 20 slots`. If a second ID appears, open an issue and include the full log.
 
 **Players lose money or items after a crash**
 Without autosave, the game saves only when everyone sleeps or when a player quits normally. Make sure `AutoSaveEnabled` is on; the log shows `Autosaving …` each time it runs. A crash can still lose up to `AutoSaveMinutes` of progress.
@@ -81,27 +88,6 @@ Make sure `PlantSyncEnabled` is on for the host. Clients only see the water and 
 
 **Diagnostic logging**
 The mod logs each step of the lobby and join flow with a `[diag]` prefix in `MelonLoader\Latest.log`. Include those lines when reporting a problem.
-
-## What changed in 1.0.4
-
-Both problems below are in the base game, not caused by the larger lobby. They happen with 4 players too.
-
-- **Host autosave.** The game saves only when everyone sleeps, or when a client quits normally and its game asks the host to save it. If a client crashes, that request never arrives and they lose everything since the last sleep; if the host crashes, everyone does. The host now runs the game's own full save (the same one used at sleep) every `AutoSaveMinutes`, skipping while a save or sleep is already in progress. The world and all connected players are saved together, so they stay consistent.
-- **Plant sync.** The game doesn't stream pot water and growth to clients. Every machine simulates each pot on its own, and the host only corrects clients on some events. Two server-only events never reach clients: a **botanist watering** a pot, and the water drain applied during **sleep**. Clients then see a pot as dry when it isn't (and its growth % stops rising on their screen), or never see "needs water" when it is dry. Players who joined after the event see the right values, which is why only some players are affected. The host now sends the real water level after both events, and resends every pot's water and growth every `PlantSyncMinutes`.
-
-## What changed in 1.0.3
-
-Game 0.4.7 moved the Steam lobby code out of the `Lobby` class into a new `SteamLobbyService` class. The original patches pointed at methods and fields that no longer exist, so Harmony refused to load them.
-
-For the Il2Cpp build:
-
-- **Retargeted patches.** Lobby creation, the lobby-created callback and member tracking are now patched on `SteamLobbyService`. The lobby screen is patched on `LobbyInterface.Start`, because `Awake` no longer exists.
-- **`Lobby.PlayerLimit` is left alone.** In Il2Cpp it's a compile-time constant, and writing to it crashes the game. The 20-player limit is applied when the lobby is created instead, and Steam's member limit is set to match.
-- **Invites past 4 players.** Below the game's normal 4-player limit, the game's own invite code runs. Above it, the mod opens the Steam invite window itself, up to 20.
-- **Duplicate-lobby fix.** One click on Invite could create two Steam lobbies. The host's game tracked the second while friends joined the first, so neither saw the other and the "start game" message never reached them. The mod now allows only one lobby creation at a time and waits until the lobby exists before opening the invite window.
-- **Diagnostic logging** added (`[diag]` lines).
-
-The Mono build is unchanged from the original.
 
 ## Known limitations
 
