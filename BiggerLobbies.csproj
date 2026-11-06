@@ -895,6 +895,7 @@
 	  <Compile Include="Integrations\DiagnosticPatches.cs" />
 	  <Compile Include="Integrations\AutoSave.cs" />
 	  <Compile Include="Integrations\GrowSyncFix.cs" />
+	  <Compile Include="Integrations\LateJoinFix.cs" />
 	  <Compile Include="Utils\Constants.cs" />
 	</ItemGroup>
 
