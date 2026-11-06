@@ -1,4 +1,7 @@
 ﻿#if MONO
+// Original patches, kept for the Mono build only. Not updated or tested for game 0.4.7.
+// The IL2CPP build uses Il2CppLobbyPatches.cs / LobbyDedupePatches.cs instead.
+#if MONO
 using ScheduleOne.Networking;
 using ScheduleOne.UI.Multiplayer;
 using ScheduleOne.DevUtilities;
@@ -314,3 +317,5 @@ namespace BiggerLobbies.Integrations
         #endregion
     }
 }
+
+#endif

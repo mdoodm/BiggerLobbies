@@ -890,6 +890,9 @@
 	<ItemGroup>
 	  <Compile Include="Core.cs" />
 	  <Compile Include="Integrations\HarmonyPatches.cs" />
+	  <Compile Include="Integrations\Il2CppLobbyPatches.cs" />
+	  <Compile Include="Integrations\LobbyDedupePatches.cs" />
+	  <Compile Include="Integrations\DiagnosticPatches.cs" />
 	  <Compile Include="Utils\Constants.cs" />
 	</ItemGroup>
 
