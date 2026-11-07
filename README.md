@@ -1,150 +1,206 @@
-# BiggerLobbies
+<p align="center">
+  <img src="assets/banner.svg" alt="BiggerLobbies: a Schedule I lobby with 20 player slots, 4 from the base game and 16 added by the mod" width="100%">
+</p>
 
-A MelonLoader mod for **Schedule I** that raises the multiplayer lobby limit from 4 to 20 players.
+<p align="center">
+  <b>Play Schedule I with up to 20 friends, rejoin after a crash, and stop losing progress.</b>
+</p>
 
-This is a fork of [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies), updated to work with **game version 0.4.7** (Il2Cpp build). The original mod stopped loading after that update.
+<p align="center">
+  <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mdoodm/BiggerLobbies?label=release&color=F0A23B&labelColor=2A3746"></a>
+  <img alt="Schedule I 0.4.7" src="https://img.shields.io/badge/Schedule%20I-0.4.7-ECE7DD?labelColor=2A3746">
+  <img alt="MelonLoader 0.7.3 or later" src="https://img.shields.io/badge/MelonLoader-0.7.3%2B-ECE7DD?labelColor=2A3746">
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/mdoodm/BiggerLobbies?color=ECE7DD&labelColor=2A3746"></a>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><b>Download the latest release</b></a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#install">Install in 2 minutes</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-- Raises the lobby size from 4 to 20 players
-- Adds extra player slots to the lobby screen and shows the count as `Lobby (n/20)`
-- Keeps the Invite button available until the lobby has 20 players
+---
 
-## Additions in this fork
+## Why use it
 
-- **Game 0.4.7 support** for the Il2Cpp build
-- **Invites past 4 players:** opens the Steam invite window for players 5 to 20
-- **One lobby per host:** only one Steam lobby is created at a time, and the invite window opens once the lobby is ready, so friends always join the host's lobby
-- **Host autosave:** saves the game every 5 minutes, so a crash only loses the last few minutes instead of everything since the last sleep
-- **Client player saves:** the host saves each connected player's money, inventory and position every 30 seconds
-- **Save on leave:** when a player leaves or crashes, the host saves everything straight away, so restarting the session doesn't lose progress
-- **Join a started game:** players can join or rejoin after the host has loaded in, without the host restarting
-- **Always host a lobby:** loading a save without pressing Invite first still creates a Steam lobby, so friends can be invited or use Steam's **Join Game** at any time. Falls back to a normal solo load if Steam is offline
-- **Rejoin after a crash:** the host clears a crashed player's old Steam session, and re-checks a player whose game sends its authentication twice instead of kicking them
-- **Plant sync:** the host sends pot water levels and growth % to every player, so everyone sees the same "needs water" icon and growth progress
-- **Settings** for autosave, player saves, plant sync, late join and the automatic lobby (see [Settings](#settings))
-- **Diagnostic logging** of the lobby and join flow (`[diag]` lines in the log)
+Schedule I's multiplayer stops at 4 players, and the host has to restart the session whenever something goes wrong. BiggerLobbies fixes the parts that get in the way of a long co-op night:
 
-## Compatibility
+- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them.
+- **Invite people any time.** Your game starts online even if you load straight into your save, so friends can accept an invite or use Steam's **Join Game** whenever they like.
+- **Crashes don't end the session.** A player whose game crashes can rejoin without you restarting, and you don't have to sleep to save their progress.
+- **Keep your progress.** The game normally saves only when everyone sleeps. The mod saves the world every 5 minutes, saves each player every 30 seconds, and saves straight away when someone drops.
+- **Everyone sees the same plants.** Water levels and growth progress are kept in step for every player, so nobody sees a pot as dry when it isn't.
 
-| Build | Game 0.4.7 | Notes |
-|-------|------------|-------|
-| Il2Cpp (default Steam branch) | Supported | Tested with MelonLoader v0.7.3 |
-| Mono (alternate branch) | Untested | Still uses the original patches, which target code that 0.4.7 removed. Expect it not to work. |
+**Only the host needs the mod.** Your friends can join with an unmodded game.
 
-Requires **MelonLoader v0.7.3 or later**. MelonLoader v0.7.2 fails on game 0.4.7 before any mod loads (see [Troubleshooting](#troubleshooting)).
+## Install
 
-The mod declares itself incompatible with **ModManager & PhoneApp**, so MelonLoader won't load both at once.
+You need **Schedule I 0.4.7** (the default Steam branch) and **MelonLoader v0.7.3 or later**.
 
-## Installation
+### With r2modman
 
-### r2modman / Thunderstore Mod Manager
+1. Download `BiggerLobbies_Il2cpp.dll` from the [latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest).
+2. In your profile, create the folder `Mods\mdoodm-BiggerLobbies\mods\` and put the DLL in it. Your profile is in `%AppData%\r2modmanPlus-local\ScheduleI\profiles\<profile>\`.
+3. Disable or uninstall the original **ifBars-BiggerLobbies** package, so the two don't load together.
+4. Launch with **Start modded**.
 
-1. Install MelonLoader v0.7.3 or later in your profile.
-2. Copy `BiggerLobbies_Il2cpp.dll` into a folder for this mod in your profile, creating it if needed:
-   `%AppData%\r2modmanPlus-local\ScheduleI\profiles\<profile>\Mods\mdoodm-BiggerLobbies\mods\`
-3. Launch with **Start modded** in r2modman.
-
-Disable or uninstall the original **ifBars-BiggerLobbies** package so the two don't load together, or copy the DLL into that package's `mods` folder instead of creating a new one. If you use the ifBars folder, don't update that package afterwards: an update puts the original DLL back, which doesn't work on 0.4.7.
-
-### Manual
+### Without a mod manager
 
 1. Install MelonLoader v0.7.3 or later into the game folder.
-2. Copy `BiggerLobbies_Il2cpp.dll` into `Schedule I\Mods\`.
+2. Put `BiggerLobbies_Il2cpp.dll` in `Schedule I\Mods\`.
 3. Launch the game.
+
+To check your download, compare its SHA-256 with the hash on the release page:
+
+```
+Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
+```
+
+## What's included
+
+| | Feature | What it does |
+|---|---|---|
+| Lobby | 20 players | Raises the lobby size from 4 to 20 and shows `Lobby (n/20)` on the lobby screen |
+| | Invites past 4 | Keeps the Invite button working until the lobby is full |
+| | Always online | Creates a Steam lobby as your save loads, so you can invite people without going back to the menu. Loads solo if Steam is offline |
+| | One lobby per host | Stops a double click on Invite from creating two lobbies, which left friends stuck in the menu |
+| Joining | Join a started game | Lets players join or rejoin after you've loaded in |
+| | Rejoin after a crash | Clears a crashed player's old Steam session, and re-checks a player whose game authenticates twice instead of kicking them |
+| Saving | Autosave | Runs the game's normal save every 5 minutes |
+| | Player saves | Saves each connected player's money, inventory and position every 30 seconds |
+| | Save on leave | Saves everything the moment a player leaves or crashes |
+| Farming | Plant sync | Sends pot water levels and growth progress to every player |
+
+The fork also logs each step of the lobby and join flow (lines starting `[diag]`), which helps when reporting a problem.
 
 ## Settings
 
-After the first launch, the settings are in `UserData\MelonPreferences.cfg` under `[BiggerLobbies]`:
+Every feature is on by default. After the first launch you can change them in `UserData\MelonPreferences.cfg`, under `[BiggerLobbies]`:
 
 | Setting | Default | What it does |
-|---------|---------|--------------|
-| `AutoSaveEnabled` | `true` | As host, save the game every few minutes |
+|---|---|---|
+| `AlwaysHostLobby` | `true` | Create a Steam lobby automatically when you load a save |
+| `LateJoinEnabled` | `true` | Let players join a game that has already started |
+| `AutoSaveEnabled` | `true` | Save the game every few minutes, and when a player leaves |
 | `AutoSaveMinutes` | `5` | Real-time minutes between autosaves |
-| `PlantSyncEnabled` | `true` | As host, send pot water levels and growth progress to clients |
-| `PlantSyncMinutes` | `30` | In-game minutes between full resyncs of each pot |
-| `PlayerSaveEnabled` | `true` | As host, save each connected player's data between autosaves |
+| `PlayerSaveEnabled` | `true` | Save each connected player between autosaves |
 | `PlayerSaveSeconds` | `30` | Seconds between player saves |
-| `LateJoinEnabled` | `true` | As host, let players join a game that has already started |
-| `AlwaysHostLobby` | `true` | Create a Steam lobby automatically when loading a save, so the game always starts online |
+| `PlantSyncEnabled` | `true` | Send pot water levels and growth progress to players |
+| `PlantSyncMinutes` | `30` | In-game minutes between full resyncs of each pot |
 
-`AutoSaveEnabled` also controls the save that runs when a player leaves.
+Player saves run more often than full saves, so a player's file can be a few minutes ahead of the world. If the host crashes in that window, items a player just moved between their inventory and storage can be lost or duplicated. The base game behaves the same way when a player quits normally.
 
-Player saves run more often than full saves, so a player's file can be up to `AutoSaveMinutes` ahead of the world. If the host crashes in that window, items a player moved between their inventory and storage can be lost or duplicated. The game already behaves this way when a player quits normally.
+## Before you play
 
-## Who needs the mod
-
-Only the **host** needs it. Every feature runs on the host only. In testing, a player without the mod (and with no MelonLoader at all) joined a modded host and loaded into the game normally.
-
-A joining player who does have MelonLoader needs v0.7.3 or later, or no MelonLoader at all. A broken v0.7.2 install on their side can stop the join from working.
+- **Your friends don't need the mod.** If they do run MelonLoader, it has to be v0.7.3 or later. A broken v0.7.2 install on their side can stop them joining.
+- **Everyone needs the same content mods.** If you host with a mod that adds new items or objects and a friend doesn't have it, their world won't load properly.
+- **Launch from r2modman, not Steam.** Launching from Steam uses whatever MelonLoader is in the game folder, which may be an older one.
+- **This is the Il2Cpp build only.** The Mono (alternate) branch still uses the original patches and isn't expected to work on 0.4.7.
+- **ModManager & PhoneApp won't load alongside it.** The mod declares itself incompatible with that one.
 
 ## Troubleshooting
 
-**`Undefined target method for patch method ... Lobby_OnLobbyCreated_Postfix`**
-You're running the original DLL. Replace it with the one from this fork.
+<details>
+<summary><b>Undefined target method … Lobby_OnLobbyCreated_Postfix</b></summary>
 
-**`Error Generating Interop Assemblies!` (`Pass11ComputeTypeSpecifics`)**
+You're running the original ifBars DLL. Replace it with the one from this fork's [latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest).
+</details>
+
+<details>
+<summary><b>Error Generating Interop Assemblies! (Pass11ComputeTypeSpecifics)</b></summary>
+
 That MelonLoader install is too old for game 0.4.7. Update to v0.7.3, then delete these two folders so it rebuilds them on the next launch:
+
 - `MelonLoader\Il2CppAssemblies`
 - `MelonLoader\Dependencies\Il2CppAssemblyGenerator`
 
-If you use r2modman, also check you launched with **Start modded** and not from Steam. Launching from Steam loads the MelonLoader in the game folder, which may be a different, older install.
+If you use r2modman, check you launched with **Start modded** and not from Steam.
+</details>
 
-**Friends show up in the lobby on their screen but not on yours, or stay in the menu when you load in**
-Check the log starts with `BiggerLobbies v1.0.3` or later. When you host, the log should show one lobby ID in `Lobby <id> created with 20 slots`. If a second ID appears, open an issue and include the full log.
+<details>
+<summary><b>A friend can't join after I've loaded in</b></summary>
 
-**Players lose money or items after a crash**
-Without the mod, the game saves only when everyone sleeps or when a player quits normally. Make sure `AutoSaveEnabled` and `PlayerSaveEnabled` are on. The log shows `Autosaving …` for each full save and `A player left; saving now` when someone drops. A crashed player can still lose up to `PlayerSaveSeconds` of progress.
+Make sure `AlwaysHostLobby` and `LateJoinEnabled` are on. Your game only accepts players if it started online; the log shows `Always host lobby: lobby ready; loading as host` when it did. When someone joins mid-game, the log shows `Player joined mid-game`.
 
-**A player can't join after the host has loaded in**
-Make sure `LateJoinEnabled` and `AlwaysHostLobby` are on. The game only accepts players if it started online, and with `AlwaysHostLobby` the log shows `Always host lobby: lobby ready; loading as host`. When someone joins mid-game the log shows `Player joined mid-game`. If a crashed player gets an authentication error, look for `Cleared any old Steam auth session` or `re-authenticated with Steam` in the host log and include it in a report.
+If a player who crashed gets an authentication error, look for `Cleared any old Steam auth session` or `re-authenticated with Steam` in your log and include it in a report.
+</details>
 
-**A player joins but the world is broken, or the character creator doesn't respond**
-Check the joining player's `Player.log` for `PrefabId … is out of range`. It means the host is running a mod that adds new objects and the player isn't. Everyone needs the same content mods, or the host disables them.
+<details>
+<summary><b>Friends see themselves in my lobby, but I don't see them</b></summary>
 
-**Some players don't see the growth % or see "needs water" when the pot is watered**
-Make sure `PlantSyncEnabled` is on for the host. Clients only see the water and growth display when they're inside the property and within about 2.5 m of the pot, and the growth % is hidden while the management clipboard is equipped.
+Check your log shows `BiggerLobbies v1.0.3` or later. When you host, it should show a single lobby ID in `Lobby <id> created with 20 slots`. If two different IDs appear, open an issue with the full log.
+</details>
 
-**Diagnostic logging**
-The mod logs each step of the lobby and join flow with a `[diag]` prefix in `MelonLoader\Latest.log`. Include those lines when reporting a problem.
+<details>
+<summary><b>A friend joins but their world is broken, or the character creator won't respond</b></summary>
 
-## Known limitations
+Check their `Player.log` for `PrefabId … is out of range`. It means you're running a mod that adds new objects and they aren't. Install the same content mods on both sides, or disable them while you play together.
+</details>
 
-- **Autosave** has been tested in game as host: it ran on schedule, used the game's normal save (`Saving game … Save complete!`), wrote the world and player files, and logged no errors.
-- **Plant sync** has only been tested solo so far. The host-side code ran on a save with 24 growing pots and logged no errors, but it hasn't been checked with clients connected yet. The fix is based on reading the game's compiled code.
-- **Always host a lobby, player saves, save on leave and joining a started game** have been tested in game with one joining player (2 in the lobby): the lobby was created as the save loaded, the player joined with Steam's Join Game, player saves ran every 30 seconds, and a full save ran when they left.
-- **Rejoin after a crash:** tested in game over several crash-and-rejoin cycles with one player. When their game sent its authentication again, the host re-checked it with Steam (`re-authenticated with Steam (k_EBeginAuthSessionResultOK)`) and kept them connected.
-- **Joining a started game with 5 or more players** (the host re-sends the lobby's "ready" message) hasn't been tested yet.
-- Lobbies above 4 have been played with 5 players (host plus 4) on 1.0.3. Larger lobbies haven't been tested.
-- The extra lobby slots are copies of the game's own slot. If a future update changes the lobby screen layout, they may look wrong.
-- Mono build: not updated for 0.4.7.
+<details>
+<summary><b>Players lose money or items after a crash</b></summary>
 
-## Building from source
+Make sure `AutoSaveEnabled` and `PlayerSaveEnabled` are on. Your log shows `Autosaving …` for each full save and `A player left; saving now` when someone drops. A crashed player can still lose up to `PlayerSaveSeconds` of progress.
+</details>
 
-Requires the .NET SDK (6.0 or later).
+<details>
+<summary><b>Some players don't see growth progress, or see "needs water" on a watered pot</b></summary>
+
+Make sure `PlantSyncEnabled` is on. Players only see the water and growth display inside the property and within about 2.5 m of the pot, and growth progress is hidden while the management clipboard is equipped.
+</details>
+
+Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with your `MelonLoader\Latest.log` and `Player.log` (in `%AppData%\..\LocalLow\TVGS\Schedule I\`), plus the joining player's `Player.log` if it's a join problem. Include the `[diag]` lines.
+
+## What's been tested
+
+| Feature | Status |
+|---|---|
+| 20-player lobbies | Played with 5 players (host plus 4). Larger lobbies haven't been tested yet |
+| Always online, joining a started game | Tested with one friend joining through Steam's Join Game |
+| Joining a started game with 5 or more players | Not tested yet |
+| Rejoin after a crash | Tested over several crash-and-rejoin cycles |
+| Autosave, player saves, save on leave | Tested in game |
+| Plant sync | Runs without errors on a save with 24 growing pots; not yet checked with friends connected |
+
+The extra lobby slots are copies of the game's own slot, so a future update that changes the lobby screen could make them look wrong.
+
+## Build from source
+
+You need the .NET SDK (6.0 or later).
 
 1. Run the game once with MelonLoader so it generates `MelonLoader\Il2CppAssemblies`.
 2. Build the `Il2cpp` configuration, pointing `GamePath` at your game folder or r2modman profile:
+
    ```
    dotnet build BiggerLobbies.csproj -c Il2cpp -p:GamePath="C:\path\to\Schedule I"
    ```
 
-The project has a post-build step that **force-closes `Schedule I.exe`**, copies the DLL into `$(GamePath)\Mods`, and starts the game again. Remove the `PostBuild` target from `BiggerLobbies.csproj` if you don't want that.
+The project's post-build step **force-closes `Schedule I.exe`**, copies the DLL into `$(GamePath)\Mods` and starts the game again. Remove the `PostBuild` target from `BiggerLobbies.csproj` if you don't want that.
 
-Source layout:
+<details>
+<summary>Source layout</summary>
 
-- `Integrations/Il2CppLobbyPatches.cs`: lobby size, Steam lobby data, invite handling and lobby screen patches (Il2Cpp)
-- `Integrations/LobbyDedupePatches.cs`: the duplicate-lobby fix (Il2Cpp)
-- `Integrations/DiagnosticPatches.cs`: `[diag]` logging (Il2Cpp)
-- `Integrations/AutoSave.cs`: host autosave, player saves, save on leave and the settings (Il2Cpp)
-- `Integrations/GrowSyncFix.cs`: plant water/growth sync (Il2Cpp)
-- `Integrations/LateJoinFix.cs`: joining a game that has already started (Il2Cpp)
-- `Integrations/HarmonyPatches.cs`: the original patches (Mono build only)
-- `Utils/Constants.cs`: `MAX_PLAYERS` (20) and mod info
+| File | What's in it |
+|---|---|
+| `Integrations/Il2CppLobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
+| `Integrations/LobbyDedupePatches.cs` | One lobby per host |
+| `Integrations/AlwaysHostLobby.cs` | Creating a lobby as a save loads |
+| `Integrations/LateJoinFix.cs` | Joining a game that has already started |
+| `Integrations/StaleAuthFix.cs` | Rejoining after a crash |
+| `Integrations/AutoSave.cs` | Autosave, player saves, save on leave and the settings |
+| `Integrations/GrowSyncFix.cs` | Plant sync |
+| `Integrations/DiagnosticPatches.cs` | `[diag]` logging |
+| `Integrations/HarmonyPatches.cs` | The original patches, used by the Mono build only |
+| `Utils/Constants.cs` | Player limit and mod info |
+
+</details>
 
 ## Credits
 
-- Original mod by **Bars** ([ifBars](https://github.com/ifBars/BiggerLobbies)).
-- 0.4.7 update by [mdoodm](https://github.com/mdoodm), with AI assistance.
+BiggerLobbies was created by **Bars** ([ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies)). The 0.4.7 update and the additions in this fork are by [mdoodm](https://github.com/mdoodm), with AI assistance. Released under the [MIT licence](LICENSE).
 
-See [LICENSE](LICENSE).
+<p align="center">
+  <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><b>Download the latest release</b></a>
+</p>
