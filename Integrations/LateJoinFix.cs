@@ -63,6 +63,14 @@ public static class LateJoinFix
         try
         {
             if (!svc.IsHost || !svc.IsInLobby) yield break;
+            // With 4 or fewer members the vanilla client joins by itself from lobby data;
+            // an extra "ready" would make it load twice and fail authentication.
+            int members = SteamMatchmaking.GetNumLobbyMembers(svc._lobbySteamID);
+            if (members <= BiggerLobbies.Utils.Constants.VANILLA_LIMIT)
+            {
+                MelonLogger.Msg($"Player joined mid-game ({members} in lobby); the game connects them itself");
+                yield break;
+            }
             _lastSend = UnityEngine.Time.realtimeSinceStartup;
             svc.SetLobbyData("ready", "true");
             svc.SendMessage("ready");

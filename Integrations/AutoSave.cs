@@ -42,6 +42,7 @@ public static class AutoSave
         _playerSaveSeconds = _cat.CreateEntry("PlayerSaveSeconds", 30, "Client player save interval (seconds)");
         GrowSyncFix.Init(_cat);
         LateJoinFix.Init(_cat);
+        AlwaysHostLobby.Init(_cat);
     }
 
     public static void Update()
