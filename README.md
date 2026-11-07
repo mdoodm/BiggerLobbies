@@ -21,6 +21,8 @@
   <a href="#coming-from-ifbarsbiggerlobbies">Coming from ifBars?</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://github.com/mdoodm/ItemSafety">Companion: ItemSafety</a>
 </p>
 
 ---
@@ -36,6 +38,9 @@ Schedule I's multiplayer stops at 4 players, and the host has to restart the ses
 - **Everyone sees the same plants.** Water levels and growth progress are kept in step for every player, so nobody sees a pot as dry when it isn't.
 
 **Only the host needs the mod.** Your friends can join with an unmodded game.
+
+> [!TIP]
+> **Losing leaves, petrol or deliveries?** That's a bug in the base game, not the lobby. Employees and cauldrons can delete items when a stack has nowhere to go, or when you reload. The companion mod [**ItemSafety**](https://github.com/mdoodm/ItemSafety) catches those cases on the host. It's in alpha testing, so back up your saves before trying it.
 
 ## Install
 
@@ -187,6 +192,14 @@ Make sure `AutoSaveEnabled` and `PlayerSaveEnabled` are on. Your log shows `Auto
 <summary><b>Some players don't see growth progress, or see "needs water" on a watered pot</b></summary>
 
 Make sure `PlantSyncEnabled` is on. Players only see the water and growth display inside the property and within about 2.5 m of the pot, and growth progress is hidden while the management clipboard is equipped.
+</details>
+
+<details>
+<summary><b>Leaves, petrol or deliveries disappear from cauldrons or employees</b></summary>
+
+BiggerLobbies doesn't touch items. This happens in the base game too, solo or with 4 players. Employees delete what doesn't fit in their pockets or has nowhere to go, deliveries are lost on reload, and a cauldron throws away a batch whose quality can't stack with its output.
+
+Try [ItemSafety](https://github.com/mdoodm/ItemSafety) (alpha, host-only). It keeps those items and logs every cauldron change with who made it. Until then, empty your employees' pockets by talking to them, and clear a cauldron's output before cooking a different leaf quality.
 </details>
 
 Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with your `MelonLoader\Latest.log` and `Player.log` (in `%AppData%\..\LocalLow\TVGS\Schedule I\`), plus the joining player's `Player.log` if it's a join problem. Include the `[diag]` lines.
