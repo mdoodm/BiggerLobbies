@@ -18,6 +18,8 @@
   &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="#install">Install in 2 minutes</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#coming-from-ifbarsbiggerlobbies">Coming from ifBars?</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
@@ -34,41 +36,6 @@ Schedule I's multiplayer stops at 4 players, and the host has to restart the ses
 - **Everyone sees the same plants.** Water levels and growth progress are kept in step for every player, so nobody sees a pot as dry when it isn't.
 
 **Only the host needs the mod.** Your friends can join with an unmodded game.
-
-## How this fork differs from the original
-
-This is a fork of [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies) 1.0.0, the version on Thunderstore. That version was written before game 0.4.7 and stopped loading after the update.
-
-| | ifBars 1.0.0 | This fork |
-|---|---|---|
-| Works on game 0.4.7 | No, fails to load | Yes (Il2Cpp build) |
-| Builds | Mono and Il2Cpp | Il2Cpp; the Mono build is unchanged from the original |
-| Lobby size | 20 | 20 |
-| Who needs the mod | Recommends every player installs it | Only the host |
-| Starting online | Only if you press Invite in the main menu first | Always, even if you load straight into your save |
-| Joining a started game | Not possible; the host has to restart | Supported |
-| Rejoining after a crash | Blocked by the player's old Steam session | Supported |
-| Saving | The game's own saves only: when everyone sleeps, or when a player quits normally | Autosave every 5 minutes, player saves every 30 seconds, and a save when someone drops |
-| Plant water and growth | Can differ between players (base-game behaviour) | Kept in step by the host |
-| Settings | None | 8 settings in `MelonPreferences.cfg` |
-| Diagnostic logging | None | `[diag]` lines for the lobby and join flow |
-| Dependencies | MelonLoader 0.7.0, SwapperPlugin | MelonLoader 0.7.3 or later |
-
-### Issues fixed
-
-Problems with the original mod on game 0.4.7:
-
-- **The mod failed to load** with `Undefined target method for patch method … Lobby_OnLobbyCreated_Postfix`. Game 0.4.7 moved the Steam lobby code from `Lobby` into a new `SteamLobbyService` class, and the lobby screen lost the `Awake` method the original patched. The patches now target the new code.
-- **Setting the player limit crashed the game.** In the Il2Cpp build `Lobby.PlayerLimit` is a compile-time constant, and writing to it causes an access violation. The 20-player limit is now applied when the lobby is created instead.
-- **Friends joined but stayed in the main menu.** One click on Invite could create two Steam lobbies. The host's game tracked one while friends joined the other, so they never saw each other and the "start game" message never reached them. Only one lobby is created now.
-
-Problems in the base game that the fork works around:
-
-- **Inviting from a save you loaded directly didn't work,** and Steam's Join Game was unavailable. The game only starts online if a lobby exists before the save loads, so the fork creates one automatically.
-- **Players couldn't join after the host had loaded in.** A joining player's game only handles 4 lobby members and fails with more. The host now re-sends the "ready" message so they connect another way.
-- **A player who crashed couldn't rejoin.** Their old Steam session stayed open (`k_EBeginAuthSessionResultDuplicateRequest`), and a game that sent its authentication twice was kicked. The host now clears the old session and re-checks the second request with Steam.
-- **A crash lost everything since the last sleep.** The game only saves at sleep or when a player quits normally. The fork adds autosave, player saves and a save on leave.
-- **Some players saw the wrong "needs water" icon or frozen growth.** Botanist watering and the overnight water drain are only applied on the host. The host now sends the real values to every player.
 
 ## Install
 
@@ -109,6 +76,49 @@ Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
 | Farming | Plant sync | Sends pot water levels and growth progress to every player |
 
 The fork also logs each step of the lobby and join flow (lines starting `[diag]`), which helps when reporting a problem.
+
+## Coming from ifBars/BiggerLobbies?
+
+This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies) 1.0.0, the version on Thunderstore, which stopped loading when Schedule I updated to 0.4.7. To switch, disable the ifBars package in r2modman and follow [Install](#install).
+
+| | ifBars 1.0.0 | This fork |
+|---|---|---|
+| Game 0.4.7 | Fails to load | Works |
+| Who installs it | Every player | Only the host |
+| Inviting after you load a save | Only if you pressed Invite in the menu first | Always |
+| Joining a game in progress | Host must restart | Supported |
+| Rejoining after a crash | Blocked | Supported |
+| Saving | Only at sleep or a clean quit | Every 5 min, players every 30 s, and when someone drops |
+| Plant water and growth | Can differ between players | Same for everyone |
+| Settings | None | 8 |
+| Builds | Mono and Il2Cpp | Il2Cpp (Mono left as it was) |
+
+### Issues fixed
+
+| What you saw | What the fork does |
+|---|---|
+| The mod didn't load on 0.4.7 | Patches the game's new lobby code |
+| The game crashed when the mod set the player limit | Applies the 20-player limit when the lobby is created |
+| Friends joined but stayed stuck in the main menu | Creates only one Steam lobby per host |
+| No way to invite anyone after loading a save directly | Creates a lobby before the save loads |
+| Friends couldn't join once you'd loaded in | Re-sends the "game is ready" message to players who join late |
+| A friend who crashed couldn't get back in | Clears their old Steam session and re-checks them instead of kicking them |
+| A crash lost everything since the last sleep | Autosaves, saves players often, and saves when someone drops |
+| Some players saw "needs water" on watered pots, or growth that never moved | Sends every player the host's water and growth values |
+
+<details>
+<summary>Technical details</summary>
+
+- **Load error:** `Undefined target method for patch method … Lobby_OnLobbyCreated_Postfix`. Game 0.4.7 moved the Steam lobby code from `Lobby` into a new `SteamLobbyService` class, and `LobbyInterface.Awake` no longer exists.
+- **Crash:** in the Il2Cpp build `Lobby.PlayerLimit` is a compile-time constant; writing to it causes an access violation.
+- **Stuck in the menu:** one Invite click could create two Steam lobbies. The host tracked one and friends joined the other, so the "start game" message never reached them.
+- **Inviting after loading a save:** the game picks online or offline once, as the save loads, depending on whether a lobby exists.
+- **Joining late:** a joining player's game stores lobby members in a 4-slot array and fails with 5 or more, before it reads the lobby's ready flag. The chat message path doesn't use that array.
+- **Rejoining after a crash:** the old Steam auth session stayed open (`k_EBeginAuthSessionResultDuplicateRequest`), and a client that authenticated twice on one connection was disconnected.
+- **Lost progress:** the game saves only at sleep, or when a client quits cleanly and asks the host to save it.
+- **Plants:** each machine simulates pots on its own. Botanist watering and the overnight water drain are applied only on the host and never sent.
+
+</details>
 
 ## Settings
 
