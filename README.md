@@ -41,16 +41,9 @@ Schedule I's multiplayer stops at 4 players, and the host has to restart the ses
 
 You need **Schedule I 0.4.7** (the default Steam branch) and **MelonLoader v0.7.3 or later**.
 
-### With r2modman
-
-1. Download `BiggerLobbies_Il2cpp.dll` from the [latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest).
-2. In your profile, create the folder `Mods\mdoodm-BiggerLobbies\mods\` and put the DLL in it. Your profile is in `%AppData%\r2modmanPlus-local\ScheduleI\profiles\<profile>\`.
-3. Disable or uninstall the original **ifBars-BiggerLobbies** package, so the two don't load together.
-4. Launch with **Start modded**.
-
 ### Without a mod manager
 
-1. Install MelonLoader v0.7.3 or later into the game folder.
+1. Install <a href="https://github.com/LavaGang/MelonLoader/releases/latest"><b>MelonLoader v0.7.3</b></a> or later into the game folder.
 2. Put `BiggerLobbies_Il2cpp.dll` in `Schedule I\Mods\`.
 3. Launch the game.
 
