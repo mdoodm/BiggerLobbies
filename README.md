@@ -35,6 +35,42 @@ Schedule I's multiplayer stops at 4 players, and the host has to restart the ses
 
 **Only the host needs the mod.** Your friends can join with an unmodded game.
 
+## How this fork differs from the original
+
+This is a fork of [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies) 1.0.0, the version on Thunderstore. That version was written before game 0.4.7 and stopped loading after the update.
+
+| | ifBars 1.0.0 | This fork |
+|---|---|---|
+| Works on game 0.4.7 | No, fails to load | Yes (Il2Cpp build) |
+| Builds | Mono and Il2Cpp | Il2Cpp; the Mono build is unchanged from the original |
+| Lobby size | 20 | 20 |
+| Who needs the mod | Recommends every player installs it | Only the host |
+| Starting online | Only if you press Invite in the main menu first | Always, even if you load straight into your save |
+| Joining a started game | Not possible; the host has to restart | Supported |
+| Rejoining after a crash | Blocked by the player's old Steam session | Supported |
+| Saving | The game's own saves only: when everyone sleeps, or when a player quits normally | Autosave every 5 minutes, player saves every 30 seconds, and a save when someone drops |
+| Plant water and growth | Can differ between players (base-game behaviour) | Kept in step by the host |
+| Settings | None | 8 settings in `MelonPreferences.cfg` |
+| Diagnostic logging | None | `[diag]` lines for the lobby and join flow |
+| Dependencies | MelonLoader 0.7.0, SwapperPlugin | MelonLoader 0.7.3 or later |
+
+### Issues fixed
+
+Problems with the original mod on game 0.4.7:
+
+- **The mod failed to load** with `Undefined target method for patch method … Lobby_OnLobbyCreated_Postfix`. Game 0.4.7 moved the Steam lobby code from `Lobby` into a new `SteamLobbyService` class, and the lobby screen lost the `Awake` method the original patched. The patches now target the new code.
+- **Setting the player limit crashed the game.** In the Il2Cpp build `Lobby.PlayerLimit` is a compile-time constant, and writing to it causes an access violation. The 20-player limit is now applied when the lobby is created instead.
+- **Friends joined but stayed in the main menu.** One click on Invite could create two Steam lobbies. The host's game tracked one while friends joined the other, so they never saw each other and the "start game" message never reached them. Only one lobby is created now.
+- **A player joining with 4 or fewer in the lobby loaded twice and failed authentication.** The "ready" message is now only re-sent when the base game can't connect a player by itself, with 5 or more in the lobby.
+
+Problems in the base game that the fork works around:
+
+- **Inviting from a save you loaded directly didn't work,** and Steam's Join Game was unavailable. The game only starts online if a lobby exists before the save loads, so the fork creates one automatically.
+- **Players couldn't join after the host had loaded in.** A joining player's game only handles 4 lobby members and fails with more. The host now re-sends the "ready" message so they connect another way.
+- **A player who crashed couldn't rejoin.** Their old Steam session stayed open (`k_EBeginAuthSessionResultDuplicateRequest`), and a game that sent its authentication twice was kicked. The host now clears the old session and re-checks the second request with Steam.
+- **A crash lost everything since the last sleep.** The game only saves at sleep or when a player quits normally. The fork adds autosave, player saves and a save on leave.
+- **Some players saw the wrong "needs water" icon or frozen growth.** Botanist watering and the overnight water drain are only applied on the host. The host now sends the real values to every player.
+
 ## Install
 
 You need **Schedule I 0.4.7** (the default Steam branch) and **MelonLoader v0.7.3 or later**.
