@@ -113,7 +113,7 @@ The mod logs each step of the lobby and join flow with a `[diag]` prefix in `Mel
 - **Autosave** has been tested in game as host: it ran on schedule, used the game's normal save (`Saving game … Save complete!`), wrote the world and player files, and logged no errors.
 - **Plant sync** has only been tested solo so far. The host-side code ran on a save with 24 growing pots and logged no errors, but it hasn't been checked with clients connected yet. The fix is based on reading the game's compiled code.
 - **Always host a lobby, player saves, save on leave and joining a started game** have been tested in game with one joining player (2 in the lobby): the lobby was created as the save loaded, the player joined with Steam's Join Game, player saves ran every 30 seconds, and a full save ran when they left.
-- **Rejoin after a crash:** the first crash-and-rejoin worked. On a later one the player's game sent its authentication twice and the base game kicked them; the re-authentication fix for that hasn't been tested yet.
+- **Rejoin after a crash:** tested in game over several crash-and-rejoin cycles with one player. When their game sent its authentication again, the host re-checked it with Steam (`re-authenticated with Steam (k_EBeginAuthSessionResultOK)`) and kept them connected.
 - **Joining a started game with 5 or more players** (the host re-sends the lobby's "ready" message) hasn't been tested yet.
 - Lobbies above 4 have been played with 5 players (host plus 4) on 1.0.3. Larger lobbies haven't been tested.
 - The extra lobby slots are copies of the game's own slot. If a future update changes the lobby screen layout, they may look wrong.
