@@ -1,0 +1,49 @@
+name: Big session report
+description: Hosted more than 20 players? Tell us how it went, good or bad.
+title: "Big session: "
+labels: ["big session"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports from real sessions are how we learn what a host can handle. Short answers are fine.
+  - type: input
+    id: players
+    attributes:
+      label: Players
+      description: The most players in the session at once, and your `MaxPlayers` setting.
+      placeholder: 28 at once, MaxPlayers = 32
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: How did it play?
+      options:
+        - Smooth all the way
+        - Playable, with some lag
+        - Too laggy to play
+        - Players couldn't join or got disconnected
+    validations:
+      required: true
+  - type: input
+    id: cpu
+    attributes:
+      label: Host CPU and RAM
+      placeholder: Ryzen 7 5800X, 32 GB
+  - type: input
+    id: upload
+    attributes:
+      label: Host upload speed
+      description: From any speed test, if you know it.
+      placeholder: 40 Mbps
+  - type: textarea
+    id: notes
+    attributes:
+      label: What did you notice?
+      description: Lag spikes, players who couldn't join, things that looked wrong, how long you played.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Host log (optional)
+      description: The host's `MelonLoader\Latest.log` helps a lot, especially if anything went wrong.

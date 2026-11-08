@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Troubleshooting guide
+    url: https://github.com/mdoodm/BiggerLobbies/blob/main/docs/troubleshooting.md
+    about: Fixes for load errors, friends who can't join, and lost progress.
+  - name: Items disappearing from cauldrons or employees
+    url: https://github.com/mdoodm/ItemSafety
+    about: That's a base-game bug, not the lobby. ItemSafety (alpha) fixes it on the host.

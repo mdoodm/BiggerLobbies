@@ -1,0 +1,58 @@
+name: Something broke
+description: The mod doesn't load, a friend can't join, progress was lost, or something else went wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Logs are what make a problem fixable, so please attach them.
+        Check the [troubleshooting page](https://github.com/mdoodm/BiggerLobbies/blob/main/docs/troubleshooting.md) first; your problem may already have a fix.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: I loaded my save and invited a friend through Steam. They saw the loading screen, then went back to the menu.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: BiggerLobbies version
+      description: Shown near the top of `MelonLoader\Latest.log`, for example `BiggerLobbies v1.0.7`.
+      placeholder: 1.0.7
+    validations:
+      required: true
+  - type: input
+    id: players
+    attributes:
+      label: Players in the lobby
+      description: How many people were in the lobby, and your `MaxPlayers` setting.
+      placeholder: 6 players, MaxPlayers = 20
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who had the problem?
+      options:
+        - The host
+        - A joining player
+        - Everyone
+    validations:
+      required: true
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other mods
+      description: Other mods the host and the affected player were running.
+      placeholder: Host - ItemSafety, Hydroponics. Friend - none.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Drag the files in here:
+        - the host's `MelonLoader\Latest.log`
+        - the host's `Player.log` (in `%USERPROFILE%\AppData\LocalLow\TVGS\Schedule I\`)
+        - for join problems, the joining player's `Player.log` too
+    validations:
+      required: true
