@@ -18,8 +18,8 @@ namespace BiggerLobbies.Integrations;
 
 // "Host settings": a button under Settings in the main menu and the pause menu, opening a
 // screen made from the game's own Settings screen. It has lobby type, lobby size, the
-// whitelist switch, connected players (ping, kick, blacklist), the whitelist and the
-// blacklist, plus a friends picker for adding to either list.
+// whitelist switch, connected players (ping, kick, ban), the whitelist and banned
+// players with a ban length, plus a friends picker for adding to either list.
 //
 // Everything is cloned from the game's UI so it uses the game's fonts, colours, sounds
 // and Escape/back behaviour. Game scripts on the cloned widgets are stripped so nothing
@@ -57,6 +57,7 @@ public static class HostSettingsMenu
         public bool PickForWhitelist;
         public string LastPlayersKey = "", LastWhiteKey = "", LastBlackKey = "";
         public ulong ConfirmBlacklist;
+        public readonly List<(Button b, TimeSpan? len)> BanLenButtons = new();
         public readonly Dictionary<int, TextMeshProUGUI> PingTexts = new();
         public readonly List<(GameObject row, string name)> PickerRows = new();
         public TMP_InputField? Search;
@@ -84,11 +85,20 @@ public static class HostSettingsMenu
 
     public static void OnSceneLoaded(string scene)
     {
-        if (scene == "Menu") { _menu = null; MelonCoroutines.Start(InjectWhenReady(false)); }
-        else if (scene == "Main") { _pause = null; Whitelist.WarnIfEmpty(); MelonCoroutines.Start(InjectWhenReady(true)); }
+        // The game can report the same scene more than once; run one injection per menu at a time.
+        if (scene == "Menu" && !_injecting[0]) { _menu = null; _injecting[0] = true; MelonCoroutines.Start(InjectWhenReady(false)); }
+        else if (scene == "Main" && !_injecting[1]) { _pause = null; Whitelist.WarnIfEmpty(); _injecting[1] = true; MelonCoroutines.Start(InjectWhenReady(true)); }
     }
 
+    private static readonly bool[] _injecting = new bool[2];
+
     private static IEnumerator InjectWhenReady(bool inGame)
+    {
+        try { foreach (var x in InjectLoop(inGame)) yield return x; }
+        finally { _injecting[inGame ? 1 : 0] = false; }
+    }
+
+    private static IEnumerable<object?> InjectLoop(bool inGame)
     {
         for (int i = 0; i < 120; i++)
         {
@@ -132,6 +142,7 @@ public static class HostSettingsMenu
 
     private static Ui Build(MenuScreen home, GameObject settings, Transform panel, bool inGame)
     {
+        RemoveOld(settings.transform.parent, panel);
         var ui = new Ui { InGame = inGame };
         ui.Screen = CloneScreen(settings, home, "Host settings", ui, true);
         ui.Picker = CloneScreen(settings, ui.Screen, "Add from friends", ui, false);
@@ -257,6 +268,40 @@ public static class HostSettingsMenu
 
     // --- Menu button ---------------------------------------------------------------------------
 
+    // The main menu survives a trip into the game and back, so a second injection would add a
+    // second button and screen. Remove anything left from before and give the panel its height back.
+    private static void RemoveOld(Transform screens, Transform panel)
+    {
+        int removed = 0;
+        float step = 0;
+        var settingsBtn = panel.Find("Settings");
+        if (settingsBtn != null)
+        {
+            var vlg = panel.GetComponent<VerticalLayoutGroup>();
+            step = settingsBtn.GetComponent<RectTransform>().rect.height + (vlg != null ? vlg.spacing : 2f);
+        }
+        for (int i = panel.childCount - 1; i >= 0; i--)
+        {
+            var c = panel.GetChild(i);
+            if (c.name != "HostSettings") continue;
+            if (c.gameObject.activeSelf) removed++;
+            UnityEngine.Object.DestroyImmediate(c.gameObject);
+        }
+        for (int i = screens.childCount - 1; i >= 0; i--)
+        {
+            var c = screens.GetChild(i);
+            if (c.name.StartsWith("BiggerLobbies ")) UnityEngine.Object.DestroyImmediate(c.gameObject);
+        }
+        if (removed > 0 && step > 0)
+        {
+            var rt = panel.GetComponent<RectTransform>();
+            float extra = step * removed;
+            rt.sizeDelta = new Vector2(rt.sizeDelta.x, rt.sizeDelta.y - extra);
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, rt.anchoredPosition.y + (1f - rt.pivot.y) * extra);
+            MelonLogger.Msg($"Removed {removed} leftover Host settings button(s) from an earlier visit to this menu");
+        }
+    }
+
     private static void AddMenuButton(Ui ui, Transform panel)
     {
         var settingsBtn = panel.Find("Settings");
@@ -357,6 +402,8 @@ public static class HostSettingsMenu
     private static readonly Color Playing = new(0.44f, 0.84f, 0.38f, 1f);   // the game's own green (version label)
     private static readonly Color OnlineDot = new(0.44f, 0.84f, 0.38f, 1f);   // online is green too; playing Schedule I adds a green name and label
     private static readonly Color Blocked = new(0.86f, 0.36f, 0.32f, 1f);
+    private static readonly Color Danger = new(0.70f, 0.22f, 0.20f, 1f);     // button red: white text stays readable
+    private static TimeSpan? _banLength;                                      // null = permanent
     private static Sprite? _circle, _fade;
     private static bool _spritesSearched;
 
@@ -610,7 +657,7 @@ public static class HostSettingsMenu
         Text(ui, w, "Only listed players", LabelX, ControlX - LabelX - 8);
         ui.WlOff = Btn(ui, w, "Off", ControlX, 120, () => { Whitelist.SetEnabled(false); SetStatus(ui, "Whitelist off"); RefreshStatic(ui); _nextRefresh = 0; });
         ui.WlOn = Btn(ui, w, "On", ControlX + 128, 120, () => { Whitelist.SetEnabled(true); SetStatus(ui, "Whitelist on. Players already here stay"); RefreshStatic(ui); _nextRefresh = 0; });
-        Hint(ui, L, "Starts empty each game. The blacklist always wins");
+        Hint(ui, L, "Starts empty each game. Bans always win");
         Spacer(ui, L, 4);
         ui.White = Box(ui, L);
 
@@ -619,10 +666,21 @@ public static class HostSettingsMenu
         Spacer(ui, L, 0);
         ui.Players = Box(ui, L);
 
-        // Blacklist
-        ui.BlackHeading = Section(ui, L, "Blacklist", out var brow);
-        RightBtn(ui, brow, "Add friends", 0, 140, () => OpenPicker(ui, false));
-        Hint(ui, L, "Never allowed in. Saved between games", LabelX);
+        // Banned players
+        ui.BlackHeading = Section(ui, L, "Banned", out var brow);
+        RightBtn(ui, brow, "Ban friends", 0, 140, () => OpenPicker(ui, false));
+        Spacer(ui, L, 0);
+        var lenRow = Row(ui, L, RowH);
+        Text(ui, lenRow, "Ban length", LabelX, ControlX - LabelX - 8);
+        float bx = ControlX;
+        foreach (var (lenLabel, len) in BanLength.Options)
+        {
+            var l = len; var lab = lenLabel;
+            var b = Btn(ui, lenRow, lenLabel, bx, 100, () => { _banLength = l; SetStatus(ui, $"New bans: {lab.ToLowerInvariant()}"); RefreshStatic(ui); });
+            ui.BanLenButtons.Add((b, len));
+            bx += 108;
+        }
+        Hint(ui, L, "Used for the next ban. Bans are saved between games and end on their own");
         Spacer(ui, L, 4);
         ui.Black = Box(ui, L);
 
@@ -638,6 +696,14 @@ public static class HostSettingsMenu
     private static void RefreshStatic(Ui ui)
     {
         foreach (var (b, m) in ui.PrivacyButtons) Highlight(b, LobbyPrivacy.Current == m);
+        foreach (var (b, len) in ui.BanLenButtons)
+        {
+            bool on = len == _banLength;
+            var c = b.colors;
+            c.normalColor = on ? (len == null ? Danger : Accent) : Grey;   // Permanent selected shows red
+            c.selectedColor = c.normalColor;
+            b.colors = c;
+        }
         if (ui.PrivacyHint != null) ui.PrivacyHint.text = PrivacyHint(LobbyPrivacy.Current);
         Highlight(ui.WlOff, !Whitelist.Enabled);
         Highlight(ui.WlOn, Whitelist.Enabled);
@@ -694,13 +760,13 @@ public static class HostSettingsMenu
                 ui.PingTexts[row.ClientId] = ping;
                 RightBtn(ui, r, "Kick", 128, 100, () => { SetStatus(ui, HostPlayers.Kick(row, false)); _nextRefresh = 0; });
                 bool confirming = ui.ConfirmBlacklist != 0 && ui.ConfirmBlacklist == row.SteamId;
-                var bb = RightBtn(ui, r, confirming ? "Confirm" : "Blacklist", 0, 120, () =>
+                var bb = RightBtn(ui, r, confirming ? "Confirm" : "Ban", 0, 120, () =>
                 {
-                    if (ui.ConfirmBlacklist == row.SteamId) { ui.ConfirmBlacklist = 0; SetStatus(ui, HostPlayers.Kick(row, true)); }
-                    else { ui.ConfirmBlacklist = row.SteamId; SetStatus(ui, $"Click Confirm to blacklist {row.Name}"); }
+                    if (ui.ConfirmBlacklist == row.SteamId) { ui.ConfirmBlacklist = 0; SetStatus(ui, HostPlayers.Kick(row, true, _banLength)); }
+                    else { ui.ConfirmBlacklist = row.SteamId; SetStatus(ui, $"Click Confirm to ban {row.Name} ({BanLength.Label(_banLength).ToLowerInvariant()})"); }
                     _nextRefresh = 0;
                 });
-                if (confirming) Highlight(bb, true);
+                if (confirming) { var cc = bb.colors; cc.normalColor = Danger; cc.selectedColor = Danger; bb.colors = cc; }
                 bb.interactable = row.SteamId != 0;
             }
         }
@@ -730,22 +796,22 @@ public static class HostSettingsMenu
             }
         }
 
-        // Blacklist
-        ui.BlackHeading.text = Heading("Blacklist", BanList.Bans.Count);
-        var bk = string.Join("|", ListKey(BanList.Bans));
+        // Banned players (the key holds the time left, so the countdown updates)
+        ui.BlackHeading.text = Heading("Banned", BanList.Bans.Count);
+        var bk = string.Join("|", BanKey(BanList.Bans));
         if (force || bk != ui.LastBlackKey)
         {
             ui.LastBlackKey = bk;
             Clear(ui.Black);
-            if (BanList.Bans.Count == 0) Empty(ui, ui.Black, "Nobody blacklisted");
+            if (BanList.Bans.Count == 0) Empty(ui, ui.Black, "Nobody banned");
             foreach (var e in BanList.Bans)
             {
                 var id = e.SteamId; var name = e.Name.Length > 0 ? e.Name : e.SteamId.ToString();
                 var r = Row(ui, ui.Black, RowH);
                 Avatar(r, id, Blocked);
                 Text(ui, r, name, NameX, 260, plain: true);
-                Text(ui, r, id.ToString(), NameX + 268, 200, Muted, 12);
-                RightBtn(ui, r, "Remove", 0, 100, () => { BanList.Unban(id); SetStatus(ui, $"Removed {name} from the blacklist"); _nextRefresh = 0; });
+                Text(ui, r, BanList.Remaining(e), NameX + 268, 200, e.Permanent ? Blocked : Muted, 13);
+                RightBtn(ui, r, "Unban", 0, 100, () => { BanList.Unban(id); SetStatus(ui, $"Unbanned {name}"); _nextRefresh = 0; });
             }
         }
     }
@@ -753,6 +819,11 @@ public static class HostSettingsMenu
     private static IEnumerable<string> PresenceKey(IReadOnlyList<BanList.Entry> list)
     {
         foreach (var e in list) yield return ((int)Friends.StateOf(e.SteamId)).ToString();
+    }
+
+    private static IEnumerable<string> BanKey(IReadOnlyList<BanList.Entry> list)
+    {
+        foreach (var e in list) yield return e.SteamId + ":" + BanList.Remaining(e);
     }
 
     private static IEnumerable<string> ListKey(IReadOnlyList<BanList.Entry> list)
@@ -765,7 +836,7 @@ public static class HostSettingsMenu
     private static void OpenPicker(Ui ui, bool whitelist)
     {
         ui.PickForWhitelist = whitelist;
-        ui.PickerTitle.text = whitelist ? "Add to whitelist" : "Add to blacklist";
+        ui.PickerTitle.text = whitelist ? "Add to whitelist" : "Ban friends";
         FillPicker(ui);
         FilterPicker(ui, "");
         ActivateOnce(ui.Picker);
@@ -781,7 +852,7 @@ public static class HostSettingsMenu
         var friends = Friends.List();
         int online = friends.FindAll(f => f.Online).Count;
         if (ui.PickerStatus != null)
-            ui.PickerStatus.text = ui.PickForWhitelist ? "Who can join this session" : "Who can never join. Saved between games";
+            ui.PickerStatus.text = ui.PickForWhitelist ? "Who can join this session" : $"Ban length: {BanLength.Label(_banLength).ToLowerInvariant()}";
         ui.PickerRows.Clear();
         ui.FriendCount = friends.Count; ui.OnlineCount = online;
 
@@ -807,18 +878,18 @@ public static class HostSettingsMenu
             if (fr.InThisGame) Text(ui, r, "Playing Schedule I", NameX + 308, 180, Playing, 12);
 
             Button? b = null;
-            b = RightBtn(ui, r, "Add", 0, 100, () =>
+            b = RightBtn(ui, r, ui.PickForWhitelist ? "Add" : "Ban", 0, 100, () =>
             {
                 bool ok = ui.PickForWhitelist ? Whitelist.Add(fr.SteamId, fr.Name) : AddBlack(fr);
-                if (ok) Done(b!, "Added");
+                if (ok) Done(b!, ui.PickForWhitelist ? "Added" : "Banned");
                 _nextRefresh = 0;
             });
             if (ui.PickForWhitelist)
             {
-                if (inBlack) { SetLabel(b, "Blacklisted"); b.interactable = false; }
+                if (inBlack) { SetLabel(b, "Banned"); b.interactable = false; }
                 else if (inWhite) Done(b, "Added");
             }
-            else if (inBlack) Done(b, "Added");
+            else if (inBlack) Done(b, "Banned");
         }
     }
 
@@ -898,7 +969,7 @@ public static class HostSettingsMenu
 
     private static bool AddBlack(Friends.Friend f)
     {
-        BanList.Ban(f.SteamId, f.Name);
+        BanList.Ban(f.SteamId, f.Name, _banLength);
         return BanList.IsBanned(f.SteamId);
     }
 

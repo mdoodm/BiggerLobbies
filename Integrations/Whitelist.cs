@@ -9,8 +9,8 @@ namespace BiggerLobbies.Integrations;
 
 // The whitelist. When it's on, only the host and the Steam IDs on it can join.
 // The on/off switch is saved; the list itself is not, so it starts empty every time the
-// game starts and the host picks who's allowed for this session. The blacklist still
-// applies on top: a blacklisted player is refused even if whitelisted.
+// game starts and the host picks who's allowed for this session. Bans still apply on
+// top: a banned player is refused even if whitelisted.
 public static class Whitelist
 {
     private static MelonPreferences_Entry<bool>? _enabled;
@@ -47,7 +47,7 @@ public static class Whitelist
 
     public static bool Contains(ulong id) => _allowed.Any(e => e.SteamId == id);
 
-    /// <summary>False if the player is blacklisted: the blacklist always wins.</summary>
+    /// <summary>False if the player is banned: bans always win.</summary>
     public static bool Add(ulong id, string name)
     {
         if (id == 0 || BanList.IsBanned(id)) return false;

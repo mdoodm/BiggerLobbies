@@ -12,8 +12,26 @@ using SteamTransport = Il2CppFishySteamworks.FishySteamworks;
 
 namespace BiggerLobbies.Integrations;
 
+// Ban lengths offered in Host settings.
+public static class BanLength
+{
+    public static readonly (string label, TimeSpan? length)[] Options =
+    {
+        ("1 hour", TimeSpan.FromHours(1)),
+        ("1 day", TimeSpan.FromDays(1)),
+        ("1 week", TimeSpan.FromDays(7)),
+        ("Permanent", null),
+    };
+
+    public static string Label(TimeSpan? length)
+    {
+        foreach (var (label, l) in Options) if (l == length) return label;
+        return length.HasValue ? $"{length.Value.TotalHours:0} h" : "Permanent";
+    }
+}
+
 // Connected players as the host sees them: name, verified Steam ID, Steam ping,
-// plus kick and blacklist. Used by the Host settings screen.
+// plus kick and ban. Used by the Host settings screen.
 public static class HostPlayers
 {
     public struct Row
@@ -53,18 +71,18 @@ public static class HostPlayers
         return rows;
     }
 
-    /// <summary>Disconnects the player, and blacklists them first if asked. Returns a status line.</summary>
-    public static string Kick(Row r, bool blacklist)
+    /// <summary>Disconnects the player, and bans them first if asked (null length = permanent). Returns a status line.</summary>
+    public static string Kick(Row r, bool ban, TimeSpan? length = null)
     {
         try
         {
-            if (blacklist) BanList.Ban(r.SteamId, r.Name);
+            if (ban) { BanList.Ban(r.SteamId, r.Name, length); return $"Banned {r.Name} ({BanLength.Label(length).ToLowerInvariant()})"; }
             var conn = FindConnection(r.ClientId);
             if (conn == null) return $"{r.Name} has already left";
             if (conn.IsLocalClient) return "";
             conn.Disconnect(true);
-            MelonLogger.Msg($"{(blacklist ? "Blacklisted and kicked" : "Kicked")} {r.Name}{(r.SteamId != 0 ? $" ({r.SteamId})" : "")}");
-            return blacklist ? $"Blacklisted {r.Name}" : $"Kicked {r.Name}. They can rejoin unless you blacklist them";
+            MelonLogger.Msg($"Kicked {r.Name}{(r.SteamId != 0 ? $" ({r.SteamId})" : "")}");
+            return $"Kicked {r.Name}. They can rejoin unless you ban them";
         }
         catch (Exception e) { return $"Couldn't remove {r.Name}: {e.Message}"; }
     }
@@ -83,10 +101,10 @@ public static class HostPlayers
                 if (c == null || c.IsLocalClient || !c.IsActive) continue;
                 if (BanList.VerifiedSteamId(c.ClientId) != id) continue;
                 c.Disconnect(true);
-                MelonLogger.Msg($"Disconnected {list[i].PlayerName} ({id}): blacklisted");
+                MelonLogger.Msg($"Disconnected {list[i].PlayerName} ({id}): banned");
             }
         }
-        catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect blacklisted player: {e.Message}"); }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect banned player: {e.Message}"); }
     }
 
     // Look the player up again at click time; a row can be up to a second old.

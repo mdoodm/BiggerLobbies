@@ -59,6 +59,18 @@ public static class LobbyPrivacy
         }
     }
 
+    // The base game kicks anyone who isn't the host's Steam friend as they load in
+    // (Player.SetPlayerNameAndId_Server -> PlatformFriends.IsLocalPlayerFriendsWith, its only
+    // caller). With an Open lobby, strangers are meant to get in, so skip that check; the
+    // whitelist and blacklist still apply at login.
+    [HarmonyPrefix, HarmonyPatch(typeof(Il2CppScheduleOne.Platform.PlatformFriends), nameof(Il2CppScheduleOne.Platform.PlatformFriends.IsLocalPlayerFriendsWith))]
+    private static bool IsLocalPlayerFriendsWith_Prefix(ref bool __result)
+    {
+        if (Current != Mode.Open) return true;
+        __result = true;
+        return false;
+    }
+
     /// <summary>Saves the setting and applies it to the open lobby. Returns a status line.</summary>
     public static string Set(Mode m)
     {

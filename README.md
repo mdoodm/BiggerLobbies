@@ -20,7 +20,7 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 - **Invite whenever you like.** Your game goes online as your save loads, so friends can accept an invite or use Steam's **Join Game** at any point in the session.
 - **Crashes don't end the session.** A player whose game crashes can come straight back in, without you restarting.
 - **Nobody loses progress.** The world saves every 5 minutes, each player every 30 seconds, and everything saves the moment someone drops.
-- **You decide who gets in.** **Host settings** sits under Settings in the main menu and the pause menu (or press F6). Pick Private, Friends only or Open, change the lobby size without restarting, see everyone's ping, kick players, and keep a whitelist and a blacklist picked straight from your Steam friends. *In the [1.0.8 beta](https://github.com/mdoodm/BiggerLobbies/releases): back up your saves before trying it.*
+- **You decide who gets in.** **Host settings** sits under Settings in the main menu and the pause menu (or press F6). Pick Private, Friends only or Open, change the lobby size without restarting, see everyone's ping, kick or ban players for an hour, a day, a week or for good, and keep a whitelist, all picked straight from your Steam friends.
 - **Everyone sees the same plants.** Water levels and growth stay in step for every player, so a watered pot never shows as dry.
 
 ## Install
@@ -42,14 +42,14 @@ Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
 
 ## Settings
 
-Everything is on by default. After the first launch, change settings in `UserData\MelonPreferences.cfg` under `[BiggerLobbies]`, then restart the game. Lobby type, size, whitelist and blacklist are easier to change in **Host settings**, and apply straight away.
+Everything is on by default. After the first launch, change settings in `UserData\MelonPreferences.cfg` under `[BiggerLobbies]`, then restart the game. Lobby type, size, whitelist and bans are easier to change in **Host settings**, and apply straight away.
 
 | Setting | Default | What it does |
 |---|---|---|
 | `MaxPlayers` | `20` | Lobby size, from 4 to 250. See [hosting big lobbies](docs/hosting-big-lobbies.md) |
-| `LobbyPrivacy` | `FriendsOnly` | Who can join: `Private` (invite only), `FriendsOnly` or `Open` |
+| `LobbyPrivacy` | `FriendsOnly` | Who can join: `Private` (invite only), `FriendsOnly` or `Open` (strangers can join too) |
 | `WhitelistEnabled` | `false` | Only players on the whitelist can join. The list starts empty each time you start the game |
-| `Blacklist` | empty | Steam IDs that can never join. Saved between games |
+| `BannedPlayers` | empty | Banned Steam IDs, with an optional end time. Saved between games |
 | `HostPanelKey` | `F6` | Key that opens Host settings while you host |
 | `AlwaysHostLobby` | `true` | Go online automatically when you load a save |
 | `LateJoinEnabled` | `true` | Let players join a game that has already started |

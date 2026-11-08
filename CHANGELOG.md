@@ -2,24 +2,22 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
-## 1.0.8-beta.2 (beta)
-
-A test build. Back up your saves before trying it.
-
-### Changed
-- Clearer presence on Steam avatars in Host settings: a bigger green dot for friends who are online or playing Schedule I, red for blacklisted, none when offline. Friends playing Schedule I also get a green name. The whitelist uses the same colours.
-
-## 1.0.8-beta.1 (beta)
-
-A test build. Back up your saves before trying it. The whitelist, blacklist and kick haven't been tested with a second player yet.
+## 1.0.8
 
 ### Added
-- **Host settings**, a new entry under Settings in the main menu and the pause menu, built from the game's own Settings screen. F6 opens it while you host (`HostPanelKey`). In the pause menu it only shows for the host.
-- **Lobby type** (`LobbyPrivacy`): Private (invite only), Friends only (the game's default) or Open (listed in Steam's lobby search). Applies straight away to an open lobby.
-- **Lobby size without a restart.** The slider updates the Steam lobby and the network limit straight away, and can't go below the number of players already in. Tested in game: Steam accepted 25, 65, 250, 4 and 20 and reported the same limit back each time.
-- **Players**: everyone connected, with their Steam avatar and ping, and Kick and Blacklist buttons. Both screens have Back and Close buttons; Close in the pause menu goes straight back to the game. Friends are listed by who's playing Schedule I, then who's online, with a search box.
-- **Whitelist** (`WhitelistEnabled`). When it's on, only players you add can join. The list starts empty each time you start the game, and you add players from your Steam friends. Players already in stay.
-- **Blacklist** (`Blacklist`), saved between games. A blacklisted player is refused at login and disconnected straight away if they're already in. The blacklist always wins over the whitelist. Bans use the Steam ID that Steam verifies at login, not the one a player's game reports, and you can't blacklist yourself.
+- **Host settings**, a new entry under Settings in the main menu and the pause menu, built from the game's own Settings screen. F6 opens it while you host (`HostPanelKey`). In the pause menu it only shows for the host. Both screens have Back and Close buttons.
+- **Lobby type** (`LobbyPrivacy`): Private (invite only), Friends only (the game's default) or Open (listed in Steam's lobby search, and strangers can join). Applies straight away to an open lobby.
+- **Lobby size without a restart.** The slider updates the Steam lobby and the network limit straight away, and can't go below the number of players already in.
+- **Players**: everyone connected, with their Steam avatar, ping, and Kick and Ban buttons.
+- **Whitelist** (`WhitelistEnabled`). When it's on, only players you add can join. It starts empty each time you start the game. Players already in stay.
+- **Banned players** (`BannedPlayers`). Ban for 1 hour, 1 day, 1 week or Permanent (shown in red). Each ban shows the time left and has an Unban button; timed bans end on their own and are saved between games. A banned player is refused at login and removed straight away if they're already in. Bans always win over the whitelist. Bans use the Steam ID that Steam verifies at login, so nobody can get someone else banned, and you can't ban yourself.
+- **Picking from your Steam friends** for the whitelist and bans: friends playing Schedule I first, then online, then the rest, with a search box. A green dot means online, a green name means playing Schedule I, a red dot means banned.
+
+### Fixed
+- Open lobbies now let strangers play. The base game kicked anyone who isn't the host's Steam friend as they loaded in.
+
+### Known
+- A kicked or banned player's game says "Authentication Error" and still shows the Steam lobby. Steam doesn't let the host remove someone from a lobby, and the message comes from their game. A banned player can't get back in.
 
 ## 1.0.7
 
