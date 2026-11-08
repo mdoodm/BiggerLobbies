@@ -154,9 +154,10 @@ public static class HarmonyPatches
     private static void UpdateTitle(LobbyInterface ui, int hidden = 0, int fake = 0)
     {
         if (ui.Lobby == null || ui.LobbyTitle == null) return;
-        string more = hidden > 0 ? $", +{hidden} more" : "";
-        string test = fake > 0 ? $" [{fake} fake]" : "";
-        ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount + fake}/{LobbySize.MaxPlayers}{more}){test}";
+        string more = hidden > 0 ? $" +{hidden}" : "";
+        string test = fake > 0 ? " [test]" : "";
+        if (LobbySize.MaxPlayers > LobbySize.Tested) ui.LobbyTitle.enableWordWrapping = false;
+        ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount + fake}/{LobbySize.MaxPlayers}){more}{test}";
     }
 
     private static int CountActive(Il2CppReferenceArray<RectTransform>? slots)

@@ -139,7 +139,7 @@ Player saves run more often than full saves, so a player's file can be a few min
 
 ## Before you play
 
-- **More than 20 players is experimental.** Every player connects through the host, so the host's CPU and upload speed set the real limit, and parts of the game may still assume 4 players. Above 20 the lobby screen squeezes the player icons closer together, and past 60 it shows `+N more` in the title instead.
+- **More than 20 players is experimental.** Every player connects through the host, so the host's CPU and upload speed set the real limit, and parts of the game may still assume 4 players. Above 20 the lobby screen shows players as a table, in rows of 20 under the title. It fits 5 rows (100 players); past that the title shows `+N` for the rest.
 - **Your friends don't need the mod.** If they do run MelonLoader, it has to be v0.7.3 or later. A broken v0.7.2 install on their side can stop them joining.
 - **Everyone needs the same content mods.** If you host with a mod that adds new items or objects and a friend doesn't have it, their world won't load properly.
 - **Launch from r2modman, not Steam.** Launching from Steam uses whatever MelonLoader is in the game folder, which may be an older one.
@@ -212,7 +212,7 @@ Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) wit
 | Feature | Status |
 |---|---|
 | 20-player lobbies | Played with 5 players (host plus 4). Larger lobbies haven't been tested yet |
-| `MaxPlayers` above 20 | Not tested with players yet |
+| `MaxPlayers` above 20 | Lobby screen checked with `DebugFakePlayers` at 40 and 100. Not tested with real players yet |
 | Always online, joining a started game | Tested with one friend joining through Steam's Join Game |
 | Joining a started game with 5 or more players | Not tested yet |
 | Rejoin after a crash | Tested over several crash-and-rejoin cycles |
@@ -241,7 +241,7 @@ The project's post-build step **force-closes `Schedule I.exe`**, copies the DLL 
 |---|---|
 | `Integrations/Il2CppLobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
 | `Integrations/LobbyDedupePatches.cs` | One lobby per host |
-| `Integrations/LobbySize.cs` | The `MaxPlayers` setting, the Steam transport's player limit and the lobby screen row |
+| `Integrations/LobbySize.cs` | The `MaxPlayers` setting, the Steam transport's player limit, the lobby screen table and `DebugFakePlayers` |
 | `Integrations/AlwaysHostLobby.cs` | Creating a lobby as a save loads |
 | `Integrations/LateJoinFix.cs` | Joining a game that has already started |
 | `Integrations/StaleAuthFix.cs` | Rejoining after a crash |

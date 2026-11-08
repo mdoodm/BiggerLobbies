@@ -106,16 +106,16 @@ public static class LobbySize
     [HarmonyPatch(typeof(LoadManager), nameof(LoadManager.StartGame))]
     private static void StartGame_Prefix() => EnsureTransportCapacity("loading save");
 
-    // --- Lobby screen row ------------------------------------------------------------------
-    // The lobby screen lays slots out in one row from a zero-size anchor: cell 75 px, spacing
-    // -150 px, so each shown player adds 75 px. Empty slots are inactive and take no space.
-    // 20 players fill about 1500 px. Above that, pull the slots closer together so the row
-    // stays the same width (avatars overlap like a fanned hand). Past ~60 players the overlap
-    // gets unreadable, so only the first 60 are shown and the title says how many more.
+    // --- Lobby screen table -----------------------------------------------------------------
+    // The lobby screen lays slots out in one row from a zero-size anchor at the top right:
+    // cell 75 px, spacing -150 px, so each shown player adds 75 px and 20 players fill about
+    // 1500 px. Empty slots are inactive and take no space. Above 20, switch the grid to
+    // rows of 20 (a table growing downwards) with the game's own spacing, so nothing
+    // overlaps. Up to 5 rows (100 players) are shown; beyond that the title says how many more.
 
-    private const float RowWidth = 1500f;  // what 20 players use with the original spacing
-    private const float MinStep = 25f;     // tightest readable overlap
-    public static int MaxShown => (int)(RowWidth / MinStep); // 60
+    public const int PerRow = 20;
+    public const int MaxRows = 5;
+    public static int MaxShown => PerRow * MaxRows; // 100
 
     private static GridLayoutGroup? _grid;
     private static float _cellX = 75f, _origSpacingX = -150f, _spacingY;
@@ -155,7 +155,30 @@ public static class LobbySize
         return want; // slots past MaxPlayers can't be shown; they count as "+N more"
     }
 
-    /// <summary>Fits the shown slots into the row; returns how many players aren't shown.</summary>
+    // The invite button is the grid's first child, so it would take a table cell and push
+    // the 100th player onto a sixth row. Take it out of the layout and park it just left of
+    // the first row (where it sat before, one cell further out).
+    private static void MoveInviteOutOfTable()
+    {
+        try
+        {
+            if (_grid == null || _grid.transform.childCount == 0) return;
+            var gridRT = _grid.GetComponent<RectTransform>();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(gridRT);
+            var invite = _grid.transform.GetChild(0).GetComponent<RectTransform>();
+            if (invite == null) return;
+            Vector2 first = invite.anchoredPosition;          // cell 0 of the table
+            var le = invite.GetComponent<LayoutElement>();
+            if (le == null) le = invite.gameObject.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
+            float step = -(_cellX + _origSpacingX);           // 75 px between columns
+            invite.anchoredPosition = new Vector2(first.x - step, first.y);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(gridRT);
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't move the invite button out of the table: {e.Message}"); }
+    }
+
+    /// <summary>Lays the shown slots out as rows of 20; returns how many players aren't shown.</summary>
     public static int FitRow(Il2CppReferenceArray<RectTransform>? slots)
     {
         if (_grid == null || slots == null) return 0;
@@ -167,14 +190,15 @@ public static class LobbySize
             active++;
             if (active > MaxShown) s.gameObject.SetActive(false);
         }
+        if (MaxPlayers <= Tested) return 0; // original single row, untouched
 
-        int shown = Math.Min(active, MaxShown);
-        float origStep = -(_cellX + _origSpacingX);          // 75 with the game's values
-        float step = shown > 0 ? Math.Min(origStep, RowWidth / shown) : origStep;
-        if (origStep <= 0f) return Math.Max(0, active - MaxShown); // unexpected layout: leave it alone
-        float spacingX = -(_cellX + step);
-        if (Math.Abs(_grid.spacing.x - spacingX) > 0.01f)
-            _grid.spacing = new Vector2(spacingX, _spacingY);
+        if (_grid.constraint != GridLayoutGroup.Constraint.FixedColumnCount || _grid.constraintCount != PerRow)
+        {
+            _grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            _grid.constraintCount = PerRow;
+            _grid.spacing = new Vector2(_origSpacingX, _spacingY);
+            MoveInviteOutOfTable();
+        }
         return Math.Max(0, active - MaxShown);
     }
 }
