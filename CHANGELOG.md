@@ -2,6 +2,13 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## 1.0.8-beta.2 (beta)
+
+A test build. Back up your saves before trying it.
+
+### Changed
+- Clearer presence on Steam avatars in Host settings: a bigger green dot for friends who are online or playing Schedule I, red for blacklisted, none when offline. Friends playing Schedule I also get a green name. The whitelist uses the same colours.
+
 ## 1.0.8-beta.1 (beta)
 
 A test build. Back up your saves before trying it. The whitelist, blacklist and kick haven't been tested with a second player yet.

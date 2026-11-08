@@ -355,7 +355,7 @@ public static class HostSettingsMenu
     // One label column and one control column; rows 36 tall, 4 apart; 24 above a section, 8 below.
     private const float LabelX = 12, ControlX = 200, RowH = 36, AvatarS = 28, NameX = LabelX + AvatarS + 12;
     private static readonly Color Playing = new(0.44f, 0.84f, 0.38f, 1f);   // the game's own green (version label)
-    private static readonly Color OnlineDot = new(0.62f, 0.62f, 0.62f, 1f);
+    private static readonly Color OnlineDot = new(0.44f, 0.84f, 0.38f, 1f);   // online is green too; playing Schedule I adds a green name and label
     private static readonly Color Blocked = new(0.86f, 0.36f, 0.32f, 1f);
     private static Sprite? _circle, _fade;
     private static bool _spritesSearched;
@@ -453,14 +453,14 @@ public static class HostSettingsMenu
         if (dot == null || _circle == null) return;
 
         // Ring in the panel colour, then the dot, so it reads on any avatar.
-        foreach (var (size, col) in new[] { (12f, new Color(0.13f, 0.13f, 0.13f, 1f)), (8f, dot.Value) })
+        foreach (var (size, col) in new[] { (16f, new Color(0.10f, 0.10f, 0.10f, 1f)), (11f, dot.Value) })
         {
             var d = new GameObject("Dot");
             var drt = d.AddComponent<RectTransform>();
             drt.SetParent(rt, false);
             drt.anchorMin = drt.anchorMax = new Vector2(1, 0);
             drt.pivot = new Vector2(0.5f, 0.5f);
-            drt.anchoredPosition = new Vector2(-2, 2);
+            drt.anchoredPosition = new Vector2(-3, 3);
             drt.sizeDelta = new Vector2(size, size);
             var di = d.AddComponent<Image>();
             di.sprite = _circle;
@@ -722,7 +722,10 @@ public static class HostSettingsMenu
                 var id = e.SteamId; var name = e.Name.Length > 0 ? e.Name : e.SteamId.ToString();
                 var r = Row(ui, ui.White, RowH);
                 Avatar(r, id, DotFor(id));
-                Text(ui, r, name, NameX, ui.RowW - NameX - 120, plain: true);
+                var nt = Text(ui, r, name, NameX, ui.RowW - NameX - 120, plain: true);
+                var st = Friends.StateOf(id);
+                if (st == Friends.Presence.Playing) nt.color = Playing;
+                else if (st == Friends.Presence.Offline) nt.color = Muted;
                 RightBtn(ui, r, "Remove", 0, 100, () => { Whitelist.Remove(id); SetStatus(ui, $"Removed {name} from the whitelist"); _nextRefresh = 0; });
             }
         }
@@ -799,7 +802,8 @@ public static class HostSettingsMenu
             bool inWhite = Whitelist.Contains(fr.SteamId), inBlack = BanList.IsBanned(fr.SteamId);
             Avatar(r, fr.SteamId, inBlack ? Blocked : fr.InThisGame ? Playing : fr.Online ? OnlineDot : (Color?)null);
             var name = Text(ui, r, fr.Name, NameX, 300, plain: true);
-            if (!fr.Online && !inBlack) name.color = Muted;
+            if (fr.InThisGame) name.color = Playing;
+            else if (!fr.Online && !inBlack) name.color = Muted;
             if (fr.InThisGame) Text(ui, r, "Playing Schedule I", NameX + 308, 180, Playing, 12);
 
             Button? b = null;
