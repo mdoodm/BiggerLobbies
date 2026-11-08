@@ -1,34 +1,20 @@
 <p align="center">
-  <img src="assets/banner-lobbies.svg" alt="BiggerLobbies: bigger lobbies for Schedule I. 4 slots in the base game, 16 more by default, and up to 250 with the MaxPlayers setting" width="100%">
+  <img src="assets/banner-crew.svg" alt="BiggerLobbies: the Schedule I lobby screen showing Lobby (47/60), rows of 20 player avatars, a dashed invite tile and one player who joined mid-game, with log lines for the lobby size and the raised Steam connection limit" width="100%">
 </p>
 
-<p align="center">
-  <b>Host Schedule I for your whole crew. Friends join any time, rejoin after a crash, and nobody loses progress.</b>
-</p>
+Friends join any time, rejoin after a crash, and nobody loses progress. Only the host installs it.
 
-<p align="center">
-  <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mdoodm/BiggerLobbies?label=release&color=F0A23B&labelColor=2A3746"></a>
-  <img alt="Schedule I 0.4.7" src="https://img.shields.io/badge/Schedule%20I-0.4.7-ECE7DD?labelColor=2A3746">
-  <img alt="MelonLoader 0.7.3 or later" src="https://img.shields.io/badge/MelonLoader-0.7.3%2B-ECE7DD?labelColor=2A3746">
-  <img alt="Only the host installs it" src="https://img.shields.io/badge/installed%20by-host%20only-ECE7DD?labelColor=2A3746">
-  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/mdoodm/BiggerLobbies?color=ECE7DD&labelColor=2A3746"></a>
-</p>
+<a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mdoodm/BiggerLobbies?label=release&color=d95fc8&labelColor=1a1e28"></a>
+<img alt="Schedule I 0.4.7" src="https://img.shields.io/badge/Schedule%20I-0.4.7-e9e6df?labelColor=1a1e28">
+<img alt="Only the host installs it" src="https://img.shields.io/badge/installed%20by-host%20only-e9e6df?labelColor=1a1e28">
 
-<p align="center">
-  <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><b>Download the latest release</b></a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="#install">Install</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/troubleshooting.md">Troubleshooting</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="CHANGELOG.md">Changelog</a>
-</p>
+**[Download the latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest)** or read [how to install](#install)
 
 ---
 
 ## What you get
 
-Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLobbies takes those limits away. Only the host installs it; everyone else joins with the normal game.
+Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLobbies takes those limits away, and everyone else joins with the normal game.
 
 - **Room for everyone.** 20 players by default, and anything up to 250 if your PC and connection can carry it.
 - **Invite whenever you like.** Your game goes online as your save loads, so friends can accept an invite or use Steam's **Join Game** at any point in the session.
@@ -73,11 +59,11 @@ There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) fo
 
 ## Good to know
 
-- **Your friends don't need the mod.** If they run MelonLoader for other mods, it must be v0.7.3 or later.
-- **Everyone needs the same content mods.** If you host with a mod that adds new items or objects, every player needs it too, or their world won't load properly.
-- **Using r2modman?** Launch with **Start modded**, not from Steam.
-- **Il2Cpp build only.** That's the default Steam branch; the Mono (alternate) branch isn't supported on 0.4.7.
-- **Not compatible with ModManager & PhoneApp.** MelonLoader won't load BiggerLobbies alongside it.
+- Friends don't need the mod. If they run MelonLoader for other mods, it must be v0.7.3 or later.
+- Every player needs the same content mods as the host. A mod that adds new items or objects on the host but not on a friend's game breaks their world.
+- With r2modman, launch with Start modded, not from Steam.
+- It's built for the Il2Cpp game, the default Steam branch. The Mono (alternate) branch isn't supported on 0.4.7.
+- MelonLoader won't load it alongside ModManager & PhoneApp.
 
 ## Read more
 
@@ -94,7 +80,3 @@ Found a bug, or ran a big session? [Open an issue](https://github.com/mdoodm/Big
 ## Credits
 
 BiggerLobbies was created by **Bars** ([ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbies)). This fork, with the 0.4.7 update and everything since, is by [mdoodm](https://github.com/mdoodm), with AI assistance. Released under the [MIT licence](LICENSE).
-
-<p align="center">
-  <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><b>Download the latest release</b></a>
-</p>
