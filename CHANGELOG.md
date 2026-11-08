@@ -9,7 +9,7 @@ All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0
 - The host raises the Steam network transport's connection limit to match, and logs it.
 - Above 20 players, the lobby screen shows players as a table in rows of 20, with the invite button beside the first row. Up to 5 rows (100 players) are shown; past that the title adds `+N`. At 20 or fewer it looks exactly as before.
 - `DebugFakePlayers` (testing only, default 0) fills the lobby screen with placeholder players to check the layout without real players.
-- `DebugDummyPlayers` (testing only, default 0) spawns copies of your character around you after a save loads and logs the frame rate every 10 seconds. F8 toggles them. They aren't networked or saved. Tested with 40 and 250.
+- `DebugDummyPlayers` (testing only, default 0) spawns copies of your character around you after a save loads and logs the frame rate every 10 seconds. They aren't networked or saved. Tested with 40 and 250 simulated players on one save.
 
 ### Fixed
 - **Only 5 players could actually connect.** The game's Steam network transport accepts just 4 connections besides the host, whatever the lobby size. The host now raises it to `MaxPlayers` before the server starts (the log shows `Steam transport player limit raised from 4 to 20`).

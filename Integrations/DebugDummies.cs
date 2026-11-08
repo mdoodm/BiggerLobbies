@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Il2CppScheduleOne.PlayerScripts;
 using MelonLoader;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace BiggerLobbies.Integrations;
@@ -14,15 +13,14 @@ namespace BiggerLobbies.Integrations;
 // networked, aren't in Player.PlayerList and aren't saved, so they can't reach save files,
 // autosave or other players. They don't test network traffic, joining or saving.
 //
-// F8 switches them on and off in game. While the setting is above 0, the frame rate is
-// logged every 10 seconds with the number of dummies out.
+// While the setting is above 0, the frame rate is logged every 10 seconds with the number
+// of dummies out. Set it back to 0 (and restart) to remove them.
 public static class DebugDummies
 {
     private static MelonPreferences_Entry<int>? _count;
     private static readonly List<GameObject> _dummies = new();
     private static readonly List<float> _phase = new();
     private static Vector3 _centre;
-    private static bool _active;          // F8 state; starts on when the setting is above 0
     private static float _spawnAfter = -1f;
 
     private static float _fpsWindowStart, _minFps = float.MaxValue;
@@ -33,11 +31,10 @@ public static class DebugDummies
     public static void Init(MelonPreferences_Category cat)
     {
         _count = cat.CreateEntry("DebugDummyPlayers", 0, "Debug: dummy characters",
-            "Testing only. After a save loads, spawns this many copies of your character around you and logs the frame rate every 10 s. Press F8 to switch them on and off. They aren't real players, aren't networked and aren't saved. Leave at 0.");
+            "Testing only. After a save loads, spawns this many copies of your character around you and logs the frame rate every 10 s. They aren't real players, aren't networked and aren't saved. Leave at 0.");
         if (Count > 0)
         {
-            _active = true;
-            MelonLogger.Warning($"DebugDummyPlayers is {Count}: {Count} dummy characters will spawn around you after a save loads (F8 toggles them). Set it back to 0 to play normally.");
+            MelonLogger.Warning($"DebugDummyPlayers is {Count}: {Count} dummy characters will spawn around you after a save loads. Set it back to 0 to play normally.");
         }
     }
 
@@ -52,18 +49,10 @@ public static class DebugDummies
         if (Count <= 0) return;
         try
         {
-            if (WasF8Pressed())
-            {
-                _active = !_active;
-                if (_active) { Spawn(); } else { Despawn(); }
-                MelonLogger.Msg($"[dummies] {(_active ? $"on: {_dummies.Count} dummies" : "off")}");
-                ResetFps();
-            }
-
             if (_spawnAfter > 0f && Time.realtimeSinceStartup >= _spawnAfter)
             {
                 _spawnAfter = -1f;
-                if (_active) Spawn();
+                Spawn();
                 ResetFps();
             }
 
@@ -71,12 +60,6 @@ public static class DebugDummies
             TrackFps();
         }
         catch (Exception e) { MelonLogger.Error($"[dummies] {e}"); _spawnAfter = -1f; }
-    }
-
-    private static bool WasF8Pressed()
-    {
-        try { var kb = Keyboard.current; return kb != null && kb.f8Key.wasPressedThisFrame; }
-        catch { return false; }
     }
 
     private static void Spawn()

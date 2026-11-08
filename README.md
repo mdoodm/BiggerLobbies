@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="BiggerLobbies: a Schedule I lobby with 20 player slots, 4 from the base game and 16 added by the mod" width="100%">
+  <img src="assets/banner.svg" alt="BiggerLobbies: a Schedule I lobby with 20 player slots, 4 from the base game and 16 added by the mod, and up to 250 with the MaxPlayers setting" width="100%">
 </p>
 
 <p align="center">
-  <b>Play Schedule I with up to 20 friends, rejoin after a crash, and stop losing progress.</b>
+  <b>Host Schedule I for 20 friends or more, let them rejoin after a crash, and stop losing progress.</b>
 </p>
 
 <p align="center">
@@ -18,6 +18,8 @@
   &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="#install">Install in 2 minutes</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#going-past-20">Going past 20</a>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="#coming-from-ifbarsbiggerlobbies">Coming from ifBars?</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
@@ -31,7 +33,7 @@
 
 Schedule I's multiplayer stops at 4 players, and the host has to restart the session whenever something goes wrong. BiggerLobbies fixes the parts that get in the way of a long co-op night:
 
-- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them. Need more? Raise `MaxPlayers` as high as 250 (experimental above 20).
+- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them. Need more? Set `MaxPlayers` anywhere up to 250 ([experimental above 20](#going-past-20)).
 - **Invite people any time.** Your game starts online even if you load straight into your save, so friends can accept an invite or use Steam's **Join Game** whenever they like.
 - **Crashes don't end the session.** A player whose game crashes can rejoin without you restarting, and you don't have to sleep to save their progress.
 - **Keep your progress.** The game normally saves only when everyone sleeps. The mod saves the world every 5 minutes, saves each player every 30 seconds, and saves straight away when someone drops.
@@ -63,6 +65,7 @@ Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
 | | Feature | What it does |
 |---|---|---|
 | Lobby | 20 players, adjustable | Raises the lobby size from 4 to 20, or anything from 4 to 250 with `MaxPlayers`, and shows `Lobby (n/20)` on the lobby screen |
+| | Room for everyone to connect | Raises the Steam network transport's limit, which lets only 4 players connect to the host, to match the lobby size |
 | | Invites past 4 | Keeps the Invite button working until the lobby is full |
 | | Always online | Creates a Steam lobby as your save loads, so you can invite people without going back to the menu. Loads solo if Steam is offline |
 | | One lobby per host | Stops a double click on Invite from creating two lobbies, which left friends stuck in the menu |
@@ -74,6 +77,34 @@ Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
 | Farming | Plant sync | Sends pot water levels and growth progress to every player |
 
 The fork also logs each step of the lobby and join flow (lines starting `[diag]`), which helps when reporting a problem.
+
+## Going past 20
+
+20 is the tested default. Set `MaxPlayers` (4 to 250) in `UserData\MelonPreferences.cfg` and restart the game to host a bigger lobby. Only the host's setting counts.
+
+| Players | Lobby screen |
+|---|---|
+| Up to 20 | One row, exactly as before |
+| 21 to 100 | A table of rows of 20 under the title, with the Invite button beside the first row |
+| Over 100 | The first 100, with `+N` in the title for the rest |
+
+**What's been checked:** the lobby screen at 40 and 100 slots, and a host save running with 250 simulated players walking around at a playable frame rate.
+
+**What hasn't:** more than 5 real players at once. Every player connects through the host, so the host's CPU and upload speed set the real limit, and parts of the game may still assume 4 players. Above 20 the log says `EXPERIMENTAL` at startup. If you run a big session, please [open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with how many joined and how it went.
+
+<details>
+<summary>Testing tools</summary>
+
+Two settings let you check a big lobby without a big group. Both are for testing only: leave them at `0` when you play.
+
+| Setting | What it does |
+|---|---|
+| `DebugFakePlayers` | Shows this many placeholder players on the lobby screen, to check the layout |
+| `DebugDummyPlayers` | After a save loads, spawns this many copies of your character around you and logs your frame rate every 10 seconds (`[dummies] 250 dummies: 32 fps average`) |
+
+Neither is real: they aren't networked, aren't in the player list and aren't saved. They don't test network traffic, joining or saving.
+
+</details>
 
 ## Coming from ifBars/BiggerLobbies?
 
@@ -88,7 +119,8 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | Rejoining after a crash | Blocked | Supported |
 | Saving | Only at sleep or a clean quit | Every 5 min, players every 30 s, and when someone drops |
 | Plant water and growth | Can differ between players | Same for everyone |
-| Settings | None | 11 |
+| Lobby size | 20, fixed | 20 by default, anything from 4 to 250 |
+| Settings | None | 9, plus 2 testing tools |
 | Builds | Mono and Il2Cpp | Il2Cpp (Mono left as it was) |
 
 ### Issues fixed
@@ -97,6 +129,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 |---|---|
 | The mod didn't load on 0.4.7 | Patches the game's new lobby code |
 | The game crashed when the mod set the player limit | Applies the 20-player limit when the lobby is created |
+| The lobby said 20, but a 6th player couldn't connect | Raises the Steam transport's connection limit to the lobby size (fixed in 1.0.7) |
 | Friends joined but stayed stuck in the main menu | Creates only one Steam lobby per host |
 | No way to invite anyone after loading a save directly | Creates a lobby before the save loads |
 | Friends couldn't join once you'd loaded in | Re-sends the "game is ready" message to players who join late |
@@ -133,14 +166,14 @@ Every feature is on by default. After the first launch you can change them in `U
 | `PlayerSaveSeconds` | `30` | Seconds between player saves |
 | `PlantSyncEnabled` | `true` | Send pot water levels and growth progress to players |
 | `PlantSyncMinutes` | `30` | In-game minutes between full resyncs of each pot |
-| `DebugFakePlayers` | `0` | Testing only: shows this many placeholder players on the lobby screen to check the layout. They aren't real or networked. Leave at 0 |
-| `DebugDummyPlayers` | `0` | Testing only: after a save loads, spawns this many copies of your character around you and logs your frame rate every 10 s. **F8** toggles them. They aren't real players, aren't networked and aren't saved. Leave at 0 |
+
+`DebugFakePlayers` and `DebugDummyPlayers` are [testing tools](#going-past-20); leave them at `0`.
 
 Player saves run more often than full saves, so a player's file can be a few minutes ahead of the world. If the host crashes in that window, items a player just moved between their inventory and storage can be lost or duplicated. The base game behaves the same way when a player quits normally.
 
 ## Before you play
 
-- **More than 20 players is experimental.** Every player connects through the host, so the host's CPU and upload speed set the real limit, and parts of the game may still assume 4 players. Above 20 the lobby screen shows players as a table, in rows of 20 under the title. It fits 5 rows (100 players); past that the title shows `+N` for the rest.
+- **More than 20 players is experimental.** See [Going past 20](#going-past-20).
 - **Your friends don't need the mod.** If they do run MelonLoader, it has to be v0.7.3 or later. A broken v0.7.2 install on their side can stop them joining.
 - **Everyone needs the same content mods.** If you host with a mod that adds new items or objects and a friend doesn't have it, their world won't load properly.
 - **Launch from r2modman, not Steam.** Launching from Steam uses whatever MelonLoader is in the game folder, which may be an older one.
@@ -172,6 +205,12 @@ If you use r2modman, check you launched with **Start modded** and not from Steam
 Make sure `AlwaysHostLobby` and `LateJoinEnabled` are on. Your game only accepts players if it started online; the log shows `Always host lobby: lobby ready; loading as host` when it did. When someone joins mid-game, the log shows `Player joined mid-game`.
 
 If a player who crashed gets an authentication error, look for `Cleared any old Steam auth session` or `re-authenticated with Steam` in your log and include it in a report.
+</details>
+
+<details>
+<summary><b>A 6th player can't connect, even though the lobby has room</b></summary>
+
+Update to 1.0.7 or later. Your log should show `Steam transport player limit raised from 4 to 20` when you load a save. Earlier versions left the game's limit of 4 connections in place.
 </details>
 
 <details>
@@ -212,8 +251,8 @@ Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) wit
 
 | Feature | Status |
 |---|---|
-| 20-player lobbies | Played with 5 players (host plus 4). Larger lobbies haven't been tested yet |
-| `MaxPlayers` above 20 | Lobby screen checked with `DebugFakePlayers` at 40 and 100. Not tested with real players yet |
+| 20-player lobbies | Played with 5 players (host plus 4). The connection limit that stopped a 6th player is raised on load (seen in the log); a 6th real player hasn't joined yet |
+| `MaxPlayers` above 20 | Lobby screen checked at 40 and 100 slots. A save ran with 250 simulated players at a playable frame rate. Not tested with real players yet |
 | Always online, joining a started game | Tested with one friend joining through Steam's Join Game |
 | Joining a started game with 5 or more players | Not tested yet |
 | Rejoin after a crash | Tested over several crash-and-rejoin cycles |
