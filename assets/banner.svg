@@ -89,5 +89,5 @@
 <rect x="74" y="292" width="28" height="28" rx="5" fill="#F0A23B"/>
 <text x="112" y="315" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#ECE7DD">16 more with the mod</text>
 <rect x="75.5" y="339.5" width="25" height="25" rx="4.5" fill="none" stroke="#F0A23B" stroke-width="3" stroke-dasharray="5 4"/>
-<text x="112" y="361" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#9AA8B6">Up to 250 (experimental)</text>
+<text x="112" y="361" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#9AA8B6">Up to 250 with MaxPlayers</text>
 </svg>

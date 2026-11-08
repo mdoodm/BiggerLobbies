@@ -33,7 +33,7 @@
 
 Schedule I's multiplayer stops at 4 players, and the host has to restart the session whenever something goes wrong. BiggerLobbies fixes the parts that get in the way of a long co-op night:
 
-- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them. Need more? Set `MaxPlayers` anywhere up to 250 ([experimental above 20](#going-past-20)).
+- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them. Need more? Set `MaxPlayers` anywhere up to 250 ([going past 20](#going-past-20)).
 - **Invite people any time.** Your game starts online even if you load straight into your save, so friends can accept an invite or use Steam's **Join Game** whenever they like.
 - **Crashes don't end the session.** A player whose game crashes can rejoin without you restarting, and you don't have to sleep to save their progress.
 - **Keep your progress.** The game normally saves only when everyone sleeps. The mod saves the world every 5 minutes, saves each player every 30 seconds, and saves straight away when someone drops.
@@ -80,7 +80,7 @@ The fork also logs each step of the lobby and join flow (lines starting `[diag]`
 
 ## Going past 20
 
-20 is the tested default. Set `MaxPlayers` (4 to 250) in `UserData\MelonPreferences.cfg` and restart the game to host a bigger lobby. Only the host's setting counts.
+20 is the default. Set `MaxPlayers` (4 to 250) in `UserData\MelonPreferences.cfg` and restart the game to host a bigger lobby. Only the host's setting counts.
 
 | Players | Lobby screen |
 |---|---|
@@ -90,7 +90,7 @@ The fork also logs each step of the lobby and join flow (lines starting `[diag]`
 
 **What's been checked:** the lobby screen at 40 and 100 slots, and a host save running with 250 simulated players walking around at a playable frame rate.
 
-**What hasn't:** more than 5 real players at once. Every player connects through the host, so the host's CPU and upload speed set the real limit, and parts of the game may still assume 4 players. Above 20 the log says `EXPERIMENTAL` at startup. If you run a big session, please [open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with how many joined and how it went.
+**What hasn't:** more than 5 real players at once. Every player connects through the host, so the host's CPU and upload speed set the practical limit. If you run a big session, please [open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with how many joined and how it went.
 
 <details>
 <summary>Testing tools</summary>
@@ -157,7 +157,7 @@ Every feature is on by default. After the first launch you can change them in `U
 
 | Setting | Default | What it does |
 |---|---|---|
-| `MaxPlayers` | `20` | Lobby size, from 4 to 250. Above 20 is experimental. Restart the game after changing it |
+| `MaxPlayers` | `20` | Lobby size, from 4 to 250. Restart the game after changing it |
 | `AlwaysHostLobby` | `true` | Create a Steam lobby automatically when you load a save |
 | `LateJoinEnabled` | `true` | Let players join a game that has already started |
 | `AutoSaveEnabled` | `true` | Save the game every few minutes, and when a player leaves |
@@ -173,7 +173,7 @@ Player saves run more often than full saves, so a player's file can be a few min
 
 ## Before you play
 
-- **More than 20 players is experimental.** See [Going past 20](#going-past-20).
+- **Hosting more than 20?** The host's CPU and upload speed set how many run smoothly. See [Going past 20](#going-past-20).
 - **Your friends don't need the mod.** If they do run MelonLoader, it has to be v0.7.3 or later. A broken v0.7.2 install on their side can stop them joining.
 - **Everyone needs the same content mods.** If you host with a mod that adds new items or objects and a friend doesn't have it, their world won't load properly.
 - **Launch from r2modman, not Steam.** Launching from Steam uses whatever MelonLoader is in the game folder, which may be an older one.

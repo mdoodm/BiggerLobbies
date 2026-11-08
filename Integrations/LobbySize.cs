@@ -22,7 +22,7 @@ public static class LobbySize
 {
     public const int Min = VANILLA_LIMIT;      // 4
     public const int Max = 250;                // Steam's lobby member cap
-    public const int Tested = MAX_PLAYERS;     // 20, the default; anything above is experimental
+    public const int Tested = MAX_PLAYERS;     // 20, the default; above it the lobby screen switches to a table
 
     private static MelonPreferences_Entry<int>? _entry;
     private static MelonPreferences_Entry<int>? _fake;
@@ -36,7 +36,7 @@ public static class LobbySize
     public static void Init(MelonPreferences_Category cat)
     {
         _entry = cat.CreateEntry("MaxPlayers", MAX_PLAYERS, "Max players",
-            $"Lobby size, {Min} to {Max}. {Tested} is the tested default; anything above it is experimental. Restart the game after changing it.");
+            $"Lobby size, {Min} to {Max}. Default {Tested}. Restart the game after changing it.");
         int v = _entry.Value;
         int clamped = Math.Clamp(v, Min, Max);
         if (clamped != v)
@@ -48,10 +48,7 @@ public static class LobbySize
         if (FakePlayers > 0)
             MelonLogger.Warning($"DebugFakePlayers is {FakePlayers}: the lobby screen shows placeholder players for testing. Set it back to 0 to play normally.");
 
-        if (MaxPlayers > Tested)
-            MelonLogger.Warning($"MaxPlayers is {MaxPlayers}. Lobbies above {Tested} players are EXPERIMENTAL: the host carries every player's traffic, and parts of the game may still assume 4 players.");
-        else
-            MelonLogger.Msg($"Lobby size: {MaxPlayers} players");
+        MelonLogger.Msg($"Lobby size: {MaxPlayers} players");
     }
 
     // --- Network transport ---------------------------------------------------------
