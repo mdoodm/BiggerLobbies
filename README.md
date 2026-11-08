@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="BiggerLobbies: a Schedule I lobby with 20 player slots, 4 from the base game and 16 added by the mod, and up to 250 with the MaxPlayers setting" width="100%">
+  <img src="assets/banner-1.0.7.svg" alt="BiggerLobbies: a Schedule I lobby with 20 player slots, 4 from the base game and 16 added by the mod, and up to 250 with the MaxPlayers setting" width="100%">
 </p>
 
 <p align="center">
