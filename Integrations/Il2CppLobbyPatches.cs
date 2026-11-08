@@ -40,7 +40,7 @@ public static class HarmonyPatches
             if (!__instance.IsInLobby || __instance.PlayerCount < VANILLA_LIMIT)
                 return true;
 
-            if (__instance.PlayerCount >= MAX_PLAYERS)
+            if (__instance.PlayerCount >= LobbySize.MaxPlayers)
             {
                 MelonLogger.Warning("Lobby already at max capacity!");
                 return false;
@@ -63,9 +63,11 @@ public static class HarmonyPatches
 
     private static void EnsurePlayersArray(SteamLobbyService svc)
     {
+        // Sized for Steam's cap, not our own MaxPlayers: a host can run a bigger lobby than
+        // this machine's setting, and the game writes _players[i] for every member unchecked.
         var players = svc._players;
-        if (players != null && players.Length >= MAX_PLAYERS) return;
-        var arr = new Il2CppStructArray<CSteamID>(MAX_PLAYERS);
+        if (players != null && players.Length >= LobbySize.Max) return;
+        var arr = new Il2CppStructArray<CSteamID>(LobbySize.Max);
         if (players != null)
             for (int i = 0; i < players.Length; i++) arr[i] = players[i];
         svc._players = arr;
@@ -91,7 +93,7 @@ public static class HarmonyPatches
     [HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.CreateLobby))]
     private static void Service_CreateLobby_Prefix(SteamLobbyService __instance, ref int maxPlayers)
     {
-        if (maxPlayers < MAX_PLAYERS) maxPlayers = MAX_PLAYERS;
+        if (maxPlayers < LobbySize.MaxPlayers) maxPlayers = LobbySize.MaxPlayers;
         try { EnsurePlayersArray(__instance); }
         catch (Exception e) { MelonLogger.Error($"Failed to resize players array: {e}"); }
     }
@@ -104,11 +106,11 @@ public static class HarmonyPatches
         {
             if (result.m_eResult != EResult.k_EResultOK) return;
             var id = new CSteamID(result.m_ulSteamIDLobby);
-            string n = MAX_PLAYERS.ToString();
-            SteamMatchmaking.SetLobbyMemberLimit(id, MAX_PLAYERS);
+            string n = LobbySize.MaxPlayers.ToString();
+            SteamMatchmaking.SetLobbyMemberLimit(id, LobbySize.MaxPlayers);
             SteamMatchmaking.SetLobbyData(id, "max_players", n);
             SteamMatchmaking.SetLobbyData(id, "num_slots", n);
-            MelonLogger.Msg($"Lobby {result.m_ulSteamIDLobby} created with {MAX_PLAYERS} slots");
+            MelonLogger.Msg($"Lobby {result.m_ulSteamIDLobby} created with {LobbySize.MaxPlayers} slots");
         }
         catch (Exception e) { MelonLogger.Error($"Failed to set lobby limits: {e}"); }
     }
@@ -132,11 +134,13 @@ public static class HarmonyPatches
 
         int existing = entries.childCount - 1; // child 0 is not a player slot
         var template = entries.GetChild(1);
-        for (int i = existing; i < MAX_PLAYERS; i++)
+        for (int i = existing; i < LobbySize.MaxPlayers; i++)
         {
             var go = UnityEngine.Object.Instantiate(template.gameObject, entries);
             go.name = $"{template.gameObject.name} ({entries.childCount - 1})";
         }
+
+        LobbySize.RememberGrid(grid);
 
         int slotCount = entries.childCount - 1;
         var slots = new Il2CppReferenceArray<RectTransform>(slotCount);
@@ -147,17 +151,24 @@ public static class HarmonyPatches
         try { ui.UpdateUI(); } catch { }
     }
 
-    private static void UpdateTitle(LobbyInterface ui)
+    private static void UpdateTitle(LobbyInterface ui, int hidden = 0)
     {
         if (ui.Lobby == null || ui.LobbyTitle == null) return;
-        ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount}/{MAX_PLAYERS})";
+        string more = hidden > 0 ? $", +{hidden} more" : "";
+        ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount}/{LobbySize.MaxPlayers}{more})";
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(LobbyInterface), nameof(LobbyInterface.UpdatePlayers))]
     private static void LobbyInterface_UpdatePlayers_Postfix(LobbyInterface __instance)
     {
-        try { UpdateTitle(__instance); }
+        try
+        {
+            int hidden = 0;
+            try { hidden = LobbySize.FitRow(__instance.PlayerSlots); }
+            catch (Exception e) { MelonLogger.Error($"Failed to fit lobby row: {e}"); }
+            UpdateTitle(__instance, hidden);
+        }
         catch (Exception e) { MelonLogger.Error($"Failed to update lobby title: {e}"); }
     }
 
@@ -168,7 +179,7 @@ public static class HarmonyPatches
         try
         {
             if (__instance.Lobby == null || __instance.InviteButton == null) return;
-            __instance.InviteButton.gameObject.SetActive(__instance.Lobby.IsHost && __instance.Lobby.PlayerCount < MAX_PLAYERS);
+            __instance.InviteButton.gameObject.SetActive(__instance.Lobby.IsHost && __instance.Lobby.PlayerCount < LobbySize.MaxPlayers);
         }
         catch (Exception e) { MelonLogger.Error($"Failed to patch UpdateButtons: {e}"); }
     }

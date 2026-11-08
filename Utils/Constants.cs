@@ -6,7 +6,7 @@
         /// Mod information
         /// </summary>
         public const string MOD_NAME = "BiggerLobbies";
-        public const string MOD_VERSION = "1.0.6";
+        public const string MOD_VERSION = "1.0.7";
         public const string MOD_AUTHOR = "Bars";
 
         /// <summary>
@@ -19,7 +19,7 @@
         }
 
         /// <summary>
-        /// Maximum player limit for lobbies
+        /// Default (and tested) lobby size. The Il2Cpp build reads the MaxPlayers setting instead (LobbySize.MaxPlayers).
         /// </summary>
         public const int MAX_PLAYERS = 20;
 

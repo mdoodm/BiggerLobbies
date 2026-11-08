@@ -31,7 +31,7 @@
 
 Schedule I's multiplayer stops at 4 players, and the host has to restart the session whenever something goes wrong. BiggerLobbies fixes the parts that get in the way of a long co-op night:
 
-- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them.
+- **Bring the whole group.** Lobbies hold 20 players instead of 4, with a slot on the lobby screen for each of them. Need more? Raise `MaxPlayers` as high as 250 (experimental above 20).
 - **Invite people any time.** Your game starts online even if you load straight into your save, so friends can accept an invite or use Steam's **Join Game** whenever they like.
 - **Crashes don't end the session.** A player whose game crashes can rejoin without you restarting, and you don't have to sleep to save their progress.
 - **Keep your progress.** The game normally saves only when everyone sleeps. The mod saves the world every 5 minutes, saves each player every 30 seconds, and saves straight away when someone drops.
@@ -62,7 +62,7 @@ Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
 
 | | Feature | What it does |
 |---|---|---|
-| Lobby | 20 players | Raises the lobby size from 4 to 20 and shows `Lobby (n/20)` on the lobby screen |
+| Lobby | 20 players, adjustable | Raises the lobby size from 4 to 20, or anything from 4 to 250 with `MaxPlayers`, and shows `Lobby (n/20)` on the lobby screen |
 | | Invites past 4 | Keeps the Invite button working until the lobby is full |
 | | Always online | Creates a Steam lobby as your save loads, so you can invite people without going back to the menu. Loads solo if Steam is offline |
 | | One lobby per host | Stops a double click on Invite from creating two lobbies, which left friends stuck in the menu |
@@ -88,7 +88,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | Rejoining after a crash | Blocked | Supported |
 | Saving | Only at sleep or a clean quit | Every 5 min, players every 30 s, and when someone drops |
 | Plant water and growth | Can differ between players | Same for everyone |
-| Settings | None | 8 |
+| Settings | None | 9 |
 | Builds | Mono and Il2Cpp | Il2Cpp (Mono left as it was) |
 
 ### Issues fixed
@@ -124,6 +124,7 @@ Every feature is on by default. After the first launch you can change them in `U
 
 | Setting | Default | What it does |
 |---|---|---|
+| `MaxPlayers` | `20` | Lobby size, from 4 to 250. Above 20 is experimental. Restart the game after changing it |
 | `AlwaysHostLobby` | `true` | Create a Steam lobby automatically when you load a save |
 | `LateJoinEnabled` | `true` | Let players join a game that has already started |
 | `AutoSaveEnabled` | `true` | Save the game every few minutes, and when a player leaves |
@@ -137,6 +138,7 @@ Player saves run more often than full saves, so a player's file can be a few min
 
 ## Before you play
 
+- **More than 20 players is experimental.** Every player connects through the host, so the host's CPU and upload speed set the real limit, and parts of the game may still assume 4 players. Above 20 the lobby screen squeezes the player icons closer together, and past 60 it shows `+N more` in the title instead.
 - **Your friends don't need the mod.** If they do run MelonLoader, it has to be v0.7.3 or later. A broken v0.7.2 install on their side can stop them joining.
 - **Everyone needs the same content mods.** If you host with a mod that adds new items or objects and a friend doesn't have it, their world won't load properly.
 - **Launch from r2modman, not Steam.** Launching from Steam uses whatever MelonLoader is in the game folder, which may be an older one.
@@ -209,6 +211,7 @@ Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) wit
 | Feature | Status |
 |---|---|
 | 20-player lobbies | Played with 5 players (host plus 4). Larger lobbies haven't been tested yet |
+| `MaxPlayers` above 20 | Not tested with players yet |
 | Always online, joining a started game | Tested with one friend joining through Steam's Join Game |
 | Joining a started game with 5 or more players | Not tested yet |
 | Rejoin after a crash | Tested over several crash-and-rejoin cycles |
@@ -237,6 +240,7 @@ The project's post-build step **force-closes `Schedule I.exe`**, copies the DLL 
 |---|---|
 | `Integrations/Il2CppLobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
 | `Integrations/LobbyDedupePatches.cs` | One lobby per host |
+| `Integrations/LobbySize.cs` | The `MaxPlayers` setting, the Steam transport's player limit and the lobby screen row |
 | `Integrations/AlwaysHostLobby.cs` | Creating a lobby as a save loads |
 | `Integrations/LateJoinFix.cs` | Joining a game that has already started |
 | `Integrations/StaleAuthFix.cs` | Rejoining after a crash |

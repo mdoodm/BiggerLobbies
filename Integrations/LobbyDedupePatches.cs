@@ -63,7 +63,7 @@ public static class LobbyDedupePatches
         _openInviteWhenReady = true;
         if (!CreatePending)
         {
-            try { __instance.CreateLobby(BiggerLobbies.Utils.Constants.MAX_PLAYERS); }
+            try { __instance.CreateLobby(LobbySize.MaxPlayers); }
             catch (Exception e) { MelonLogger.Error($"CreateLobby from OpenInviteUI failed: {e}"); }
         }
         return false;

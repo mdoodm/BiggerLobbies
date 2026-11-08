@@ -898,6 +898,7 @@
 	  <Compile Include="Integrations\LateJoinFix.cs" />
 	  <Compile Include="Integrations\AlwaysHostLobby.cs" />
 	  <Compile Include="Integrations\StaleAuthFix.cs" />
+	  <Compile Include="Integrations\LobbySize.cs" />
 	  <Compile Include="Utils\Constants.cs" />
 	</ItemGroup>
 
