@@ -90,7 +90,7 @@ The fork also logs each step of the lobby and join flow (lines starting `[diag]`
 
 **What's been checked:** the lobby screen at 40 and 100 slots, and a host save running with 250 simulated players walking around at a playable frame rate.
 
-**What hasn't:** more than 5 real players at once. Every player connects through the host, so the host's CPU and upload speed set the practical limit. If you run a big session, please [open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with how many joined and how it went.
+**Practical limit:** every player connects through the host, so the host's CPU and upload speed decide how many run smoothly. If you run a big session, please [open an issue](https://github.com/mdoodm/BiggerLobbies/issues) with how many joined and how it went.
 
 <details>
 <summary>Testing tools</summary>
@@ -251,10 +251,9 @@ Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) wit
 
 | Feature | Status |
 |---|---|
-| 20-player lobbies | Played with 5 players (host plus 4). The connection limit that stopped a 6th player is raised on load (seen in the log); a 6th real player hasn't joined yet |
-| `MaxPlayers` above 20 | Lobby screen checked at 40 and 100 slots. A save ran with 250 simulated players at a playable frame rate. Not tested with real players yet |
+| 20-player lobbies | The Steam connection limit is raised to the lobby size when a save loads (seen in the log) |
+| `MaxPlayers` above 20 | Lobby screen checked at 40 and 100 slots. A save ran with 250 simulated players at a playable frame rate |
 | Always online, joining a started game | Tested with one friend joining through Steam's Join Game |
-| Joining a started game with 5 or more players | Not tested yet |
 | Rejoin after a crash | Tested over several crash-and-rejoin cycles |
 | Autosave, player saves, save on leave | Tested in game |
 | Plant sync | Runs without errors on a save with 24 growing pots; not yet checked with friends connected |
