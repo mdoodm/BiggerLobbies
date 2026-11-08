@@ -25,6 +25,10 @@ public static class LobbySize
     public const int Tested = MAX_PLAYERS;     // 20, the default; anything above is experimental
 
     private static MelonPreferences_Entry<int>? _entry;
+    private static MelonPreferences_Entry<int>? _fake;
+
+    /// <summary>Placeholder slots shown on the lobby screen for layout testing. 0 = off.</summary>
+    public static int FakePlayers => Math.Clamp(_fake?.Value ?? 0, 0, Max);
 
     /// <summary>Lobby size for this session. Read once at startup; changing it needs a restart.</summary>
     public static int MaxPlayers { get; private set; } = MAX_PLAYERS;
@@ -38,6 +42,11 @@ public static class LobbySize
         if (clamped != v)
             MelonLogger.Warning($"MaxPlayers {v} is outside {Min}-{Max}; using {clamped}");
         MaxPlayers = clamped;
+
+        _fake = cat.CreateEntry("DebugFakePlayers", 0, "Debug: fake lobby players",
+            "Testing only. Shows this many placeholder players on the lobby screen to check the layout. They aren't real, aren't sent over the network and can't be invited. Leave at 0.");
+        if (FakePlayers > 0)
+            MelonLogger.Warning($"DebugFakePlayers is {FakePlayers}: the lobby screen shows placeholder players for testing. Set it back to 0 to play normally.");
 
         if (MaxPlayers > Tested)
             MelonLogger.Warning($"MaxPlayers is {MaxPlayers}. Lobbies above {Tested} players are EXPERIMENTAL: the host carries every player's traffic, and parts of the game may still assume 4 players.");
@@ -127,6 +136,23 @@ public static class LobbySize
                             $"start={grid.startCorner}/{grid.startAxis} align={grid.childAlignment} anchors={rt.anchorMin}-{rt.anchorMax} pos={rt.anchoredPosition}");
         }
         catch { }
+    }
+
+    /// <summary>Turns on placeholder slots after the real players; returns how many were added
+    /// (including any beyond the slots that exist, so the title can count them).</summary>
+    public static int ShowFakePlayers(Il2CppReferenceArray<RectTransform>? slots)
+    {
+        int want = FakePlayers;
+        if (want <= 0 || slots == null) return 0;
+        int added = 0;
+        for (int i = 0; i < slots.Length && added < want; i++)
+        {
+            var s = slots[i];
+            if (s == null || s.gameObject.activeSelf) continue; // real player (or the local one)
+            s.gameObject.SetActive(true);
+            added++;
+        }
+        return want; // slots past MaxPlayers can't be shown; they count as "+N more"
     }
 
     /// <summary>Fits the shown slots into the row; returns how many players aren't shown.</summary>

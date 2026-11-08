@@ -133,6 +133,7 @@ Every feature is on by default. After the first launch you can change them in `U
 | `PlayerSaveSeconds` | `30` | Seconds between player saves |
 | `PlantSyncEnabled` | `true` | Send pot water levels and growth progress to players |
 | `PlantSyncMinutes` | `30` | In-game minutes between full resyncs of each pot |
+| `DebugFakePlayers` | `0` | Testing only: shows this many placeholder players on the lobby screen to check the layout. They aren't real or networked. Leave at 0 |
 
 Player saves run more often than full saves, so a player's file can be a few minutes ahead of the world. If the host crashes in that window, items a player just moved between their inventory and storage can be lost or duplicated. The base game behaves the same way when a player quits normally.
 

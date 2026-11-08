@@ -8,6 +8,7 @@ All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0
 - **Adjustable lobby size** (`MaxPlayers`, default 20, from 4 to 250). Anything above 20 is experimental and logs a warning. Restart the game after changing it.
 - The host raises the Steam network transport's connection limit to match, and logs it.
 - Above 20 players, the lobby screen pulls the player icons closer together so the row stays on screen. Past 60 players it shows the first 60 and adds `+N more` to the title.
+- `DebugFakePlayers` (testing only, default 0) fills the lobby screen with placeholder players to check the layout without real players.
 
 ### Fixed
 - A player whose own `MaxPlayers` is lower than the host's lobby size no longer breaks their lobby member list. The member list now always has room for Steam's 250-player cap.

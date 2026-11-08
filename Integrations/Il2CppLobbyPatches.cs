@@ -151,11 +151,21 @@ public static class HarmonyPatches
         try { ui.UpdateUI(); } catch { }
     }
 
-    private static void UpdateTitle(LobbyInterface ui, int hidden = 0)
+    private static void UpdateTitle(LobbyInterface ui, int hidden = 0, int fake = 0)
     {
         if (ui.Lobby == null || ui.LobbyTitle == null) return;
         string more = hidden > 0 ? $", +{hidden} more" : "";
-        ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount}/{LobbySize.MaxPlayers}{more})";
+        string test = fake > 0 ? $" [{fake} fake]" : "";
+        ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount + fake}/{LobbySize.MaxPlayers}{more}){test}";
+    }
+
+    private static int CountActive(Il2CppReferenceArray<RectTransform>? slots)
+    {
+        int n = 0;
+        if (slots != null)
+            for (int i = 0; i < slots.Length; i++)
+                if (slots[i] != null && slots[i].gameObject.activeSelf) n++;
+        return n;
     }
 
     [HarmonyPostfix]
@@ -164,10 +174,20 @@ public static class HarmonyPatches
     {
         try
         {
-            int hidden = 0;
-            try { hidden = LobbySize.FitRow(__instance.PlayerSlots); }
+            int hidden = 0, fake = 0, unshownFake = 0;
+            try
+            {
+                var slots = __instance.PlayerSlots;
+                if (LobbySize.FakePlayers > 0)
+                {
+                    int before = CountActive(slots);
+                    fake = LobbySize.ShowFakePlayers(slots);
+                    unshownFake = fake - (CountActive(slots) - before); // more fakes than slots
+                }
+                hidden = LobbySize.FitRow(slots) + unshownFake;
+            }
             catch (Exception e) { MelonLogger.Error($"Failed to fit lobby row: {e}"); }
-            UpdateTitle(__instance, hidden);
+            UpdateTitle(__instance, hidden, fake);
         }
         catch (Exception e) { MelonLogger.Error($"Failed to update lobby title: {e}"); }
     }
