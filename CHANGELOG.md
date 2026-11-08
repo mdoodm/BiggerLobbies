@@ -2,7 +2,7 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
-## 1.0.7 (unreleased)
+## 1.0.7
 
 ### Added
 - **Adjustable lobby size** (`MaxPlayers`, default 20, from 4 to 250). Restart the game after changing it.
