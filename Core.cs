@@ -25,6 +25,12 @@ namespace BiggerLobbies
         public override void OnUpdate()
         {
             AutoSave.Update();
+            DebugDummies.Update();
+        }
+
+        public override void OnSceneWasInitialized(int buildIndex, string sceneName)
+        {
+            DebugDummies.OnSceneLoaded(sceneName);
         }
 #endif
 

@@ -88,7 +88,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | Rejoining after a crash | Blocked | Supported |
 | Saving | Only at sleep or a clean quit | Every 5 min, players every 30 s, and when someone drops |
 | Plant water and growth | Can differ between players | Same for everyone |
-| Settings | None | 9 |
+| Settings | None | 11 |
 | Builds | Mono and Il2Cpp | Il2Cpp (Mono left as it was) |
 
 ### Issues fixed
@@ -134,6 +134,7 @@ Every feature is on by default. After the first launch you can change them in `U
 | `PlantSyncEnabled` | `true` | Send pot water levels and growth progress to players |
 | `PlantSyncMinutes` | `30` | In-game minutes between full resyncs of each pot |
 | `DebugFakePlayers` | `0` | Testing only: shows this many placeholder players on the lobby screen to check the layout. They aren't real or networked. Leave at 0 |
+| `DebugDummyPlayers` | `0` | Testing only: after a save loads, spawns this many copies of your character around you and logs your frame rate every 10 s. **F8** toggles them. They aren't real players, aren't networked and aren't saved. Leave at 0 |
 
 Player saves run more often than full saves, so a player's file can be a few minutes ahead of the world. If the host crashes in that window, items a player just moved between their inventory and storage can be lost or duplicated. The base game behaves the same way when a player quits normally.
 
@@ -241,6 +242,7 @@ The project's post-build step **force-closes `Schedule I.exe`**, copies the DLL 
 |---|---|
 | `Integrations/Il2CppLobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
 | `Integrations/LobbyDedupePatches.cs` | One lobby per host |
+| `Integrations/DebugDummies.cs` | `DebugDummyPlayers`: dummy characters and frame-rate logging |
 | `Integrations/LobbySize.cs` | The `MaxPlayers` setting, the Steam transport's player limit, the lobby screen table and `DebugFakePlayers` |
 | `Integrations/AlwaysHostLobby.cs` | Creating a lobby as a save loads |
 | `Integrations/LateJoinFix.cs` | Joining a game that has already started |
