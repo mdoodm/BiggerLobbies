@@ -1,4 +1,4 @@
-#if !MONO
+﻿#if !MONO
 using System;
 using Il2CppFishNet;
 using Il2CppScheduleOne.DevUtilities;
@@ -36,6 +36,10 @@ public static class AutoSave
         _cat = MelonPreferences.CreateCategory("BiggerLobbies");
         LobbySize.Init(_cat);
         DebugDummies.Init(_cat);
+        LobbyPrivacy.Init(_cat);
+        BanList.Init(_cat);
+        Whitelist.Init(_cat);
+        HostSettingsMenu.Init(_cat);
         _enabled = _cat.CreateEntry("AutoSaveEnabled", true, "Host autosave enabled",
             "As host, periodically run the game's normal save so a crash doesn't lose progress since the last sleep.");
         _minutes = _cat.CreateEntry("AutoSaveMinutes", 5, "Autosave interval (minutes)");

@@ -900,6 +900,14 @@
 	  <Compile Include="Integrations\StaleAuthFix.cs" />
 	  <Compile Include="Integrations\LobbySize.cs" />
 	  <Compile Include="Integrations\DebugDummies.cs" />
+	  <Compile Include="Integrations\HostLobby.cs" />
+	  <Compile Include="Integrations\LobbyPrivacy.cs" />
+	  <Compile Include="Integrations\BanList.cs" />
+	  <Compile Include="Integrations\Whitelist.cs" />
+	  <Compile Include="Integrations\Friends.cs" />
+	  <Compile Include="Integrations\Avatars.cs" />
+	  <Compile Include="Integrations\HostPlayers.cs" />
+	  <Compile Include="Integrations\HostSettingsMenu.cs" />
 	  <Compile Include="Utils\Constants.cs" />
 	</ItemGroup>
 
@@ -908,7 +916,7 @@
 		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
 	</PropertyGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(SkipDeploy)' != 'true'">
 		<Exec Command="(tasklist | findstr /I &quot;Schedule.*I.exe&quot; &gt;nul &amp;&amp; taskkill /F /IM &quot;Schedule I.exe&quot; &amp;&amp; timeout /t 3 /nobreak &gt;nul) || echo Game not running&#xD;&#xA;for /L %%i in (1,1,5) do (COPY &quot;$(TargetPath)&quot; &quot;$(ModsPath)&quot; &amp;&amp; goto copied || timeout /t 1 /nobreak &gt;nul)&#xD;&#xA;:copied&#xD;&#xA;START &quot;&quot; &quot;$(GamePath)\Schedule I.exe&quot;" />
 	</Target>
 </Project>

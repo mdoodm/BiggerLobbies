@@ -7,6 +7,7 @@ using Il2CppFishNet.Transporting.Multipass;
 using SteamTransport = Il2CppFishySteamworks.FishySteamworks;
 using Il2CppScheduleOne.Networking;
 using Il2CppScheduleOne.Persistence;
+using Il2CppSteamworks;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,13 +31,13 @@ public static class LobbySize
     /// <summary>Placeholder slots shown on the lobby screen for layout testing. 0 = off.</summary>
     public static int FakePlayers => Math.Clamp(_fake?.Value ?? 0, 0, Max);
 
-    /// <summary>Lobby size for this session. Read once at startup; changing it needs a restart.</summary>
+    /// <summary>Lobby size. Read at startup; the host panel can change it while hosting.</summary>
     public static int MaxPlayers { get; private set; } = MAX_PLAYERS;
 
     public static void Init(MelonPreferences_Category cat)
     {
         _entry = cat.CreateEntry("MaxPlayers", MAX_PLAYERS, "Max players",
-            $"Lobby size, {Min} to {Max}. Default {Tested}. Restart the game after changing it.");
+            $"Lobby size, {Min} to {Max}. Default {Tested}. If you edit this file, restart the game. The host panel changes it without a restart.");
         int v = _entry.Value;
         int clamped = Math.Clamp(v, Min, Max);
         if (clamped != v)
@@ -93,6 +94,70 @@ public static class LobbySize
             MelonLogger.Msg($"Steam transport player limit is {before}; lobby size {MaxPlayers} fits ({when})");
             _lastLogged = before;
         }
+    }
+
+    // --- Changing the size while hosting -------------------------------------------------
+    // Steam lets a lobby's owner change its member limit at any time (SetLobbyMemberLimit),
+    // and the Steam transport's server socket has a live SetMaximumClients. Both are set,
+    // then read back, so the log shows what Steam actually accepted.
+
+    /// <summary>Lowest size allowed right now: never below the players already in.</summary>
+    public static int LiveMin => Math.Max(Min, HostLobby.MemberCount());
+
+    public static string SetLive(int requested)
+    {
+        int n = Math.Clamp(requested, LiveMin, Max);
+        int before = MaxPlayers;
+        if (n == before) return $"Lobby size is {n}";
+        MaxPlayers = n;
+        if (_entry != null) { _entry.Value = n; MelonPreferences.Save(); }
+
+        string steamPart = "not hosting a Steam lobby yet";
+        if (HostLobby.TryGet(out var id))
+        {
+            bool ok = false; int readBack = -1;
+            try
+            {
+                ok = SteamMatchmaking.SetLobbyMemberLimit(id, n);
+                SteamMatchmaking.SetLobbyData(id, "max_players", n.ToString());
+                SteamMatchmaking.SetLobbyData(id, "num_slots", n.ToString());
+                readBack = SteamMatchmaking.GetLobbyMemberLimit(id);
+            }
+            catch (Exception e) { MelonLogger.Warning($"SetLobbyMemberLimit failed: {e.Message}"); }
+            steamPart = ok && readBack == n
+                ? $"Steam lobby limit is now {readBack}"
+                : $"Steam {(ok ? "accepted" : "refused")} the change and reports {readBack}";
+        }
+
+        string transportPart = SetSteamLimit(n);
+        HarmonyPatches.RefreshLobbyScreen();
+        string msg = $"Lobby size changed from {before} to {n} while running: {steamPart}; {transportPart}";
+        MelonLogger.Msg(msg);
+        return $"Lobby size {n}. {steamPart}";
+    }
+
+    private static string SetSteamLimit(int n)
+    {
+        try
+        {
+            var transport = InstanceFinder.TransportManager?.Transport;
+            if (transport == null) return "no network transport yet";
+            var multipass = transport.TryCast<Multipass>();
+            SteamTransport? steam = null;
+            if (multipass?._transports != null)
+            {
+                for (int i = 0; i < multipass._transports.Count && steam == null; i++)
+                    steam = multipass._transports[i]?.TryCast<SteamTransport>();
+            }
+            else steam = transport.TryCast<SteamTransport>();
+            if (steam == null) return "no Steam transport found";
+            steam._maximumClients = (ushort)n;
+            _lastLogged = n;
+            if (steam._server == null) return $"transport limit {n} (server not started)";
+            steam._server.SetMaximumClients(n);
+            return $"transport limit now {steam._server.GetMaximumClients()}";
+        }
+        catch (Exception e) { return $"transport limit not changed ({e.Message})"; }
     }
 
     [HarmonyPrefix]

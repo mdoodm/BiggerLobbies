@@ -2,6 +2,18 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## 1.0.8-beta.1 (beta)
+
+A test build. Back up your saves before trying it. The whitelist, blacklist and kick haven't been tested with a second player yet.
+
+### Added
+- **Host settings**, a new entry under Settings in the main menu and the pause menu, built from the game's own Settings screen. F6 opens it while you host (`HostPanelKey`). In the pause menu it only shows for the host.
+- **Lobby type** (`LobbyPrivacy`): Private (invite only), Friends only (the game's default) or Open (listed in Steam's lobby search). Applies straight away to an open lobby.
+- **Lobby size without a restart.** The slider updates the Steam lobby and the network limit straight away, and can't go below the number of players already in. Tested in game: Steam accepted 25, 65, 250, 4 and 20 and reported the same limit back each time.
+- **Players**: everyone connected, with their Steam avatar and ping, and Kick and Blacklist buttons. Both screens have Back and Close buttons; Close in the pause menu goes straight back to the game. Friends are listed by who's playing Schedule I, then who's online, with a search box.
+- **Whitelist** (`WhitelistEnabled`). When it's on, only players you add can join. The list starts empty each time you start the game, and you add players from your Steam friends. Players already in stay.
+- **Blacklist** (`Blacklist`), saved between games. A blacklisted player is refused at login and disconnected straight away if they're already in. The blacklist always wins over the whitelist. Bans use the Steam ID that Steam verifies at login, not the one a player's game reports, and you can't blacklist yourself.
+
 ## 1.0.7
 
 ### Added

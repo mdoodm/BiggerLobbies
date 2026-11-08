@@ -25,6 +25,12 @@ public static class StaleAuthFix
         try
         {
             if (conn == null || auth == null) return true;
+            if (BanList.RejectIfBanned(conn, auth.SteamId)) return false;
+            if (Whitelist.RejectIfNotListed(conn, auth.SteamId)) return false;
+            // On a connection's first login Steam checks the ticket against this ID and a
+            // mismatch disconnects them, so for anyone who gets in it's their real Steam ID.
+            // A reused connection number is a new, unauthenticated connection, so it's replaced.
+            if (!conn.Authenticated && auth.SteamId != 0) BanList.RecordLogin(conn.ClientId, auth.SteamId);
 
             // A client that starts its join twice (e.g. Steam "Join Game" plus the lobby's
             // ready flag after a crash) sends a second auth on a connection that is already
@@ -35,6 +41,13 @@ public static class StaleAuthFix
             {
                 ulong rid = auth.SteamId;
                 if (rid == 0) return true; // let vanilla disconnect
+                ulong known = BanList.VerifiedSteamId(conn.ClientId);
+                if (known != 0 && known != rid)
+                {
+                    MelonLogger.Warning($"Connection {conn.ClientId} logged in again as a different Steam ID ({rid}, was {known}); disconnecting");
+                    try { conn.Disconnect(true); } catch { }
+                    return false;
+                }
                 PlatformAuth.EndAuthSession(new CSteamID(rid));
                 var result = PlatformAuth.BeginAuthSession(auth);
                 if (result != EBeginAuthSessionResult.k_EBeginAuthSessionResultOK)

@@ -125,8 +125,24 @@ public static class HarmonyPatches
         catch (Exception e) { MelonLogger.Error($"Failed to expand lobby UI: {e}"); }
     }
 
+    private static LobbyInterface? _ui;
+
+    /// <summary>After a live lobby size change: add slots if needed and redraw the lobby screen.</summary>
+    public static void RefreshLobbyScreen()
+    {
+        try
+        {
+            if (_ui == null || _ui.WasCollected) return;
+            ExpandSlots(_ui);
+            _ui.UpdatePlayers();
+            _ui.UpdateButtons();
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't refresh the lobby screen: {e.Message}"); }
+    }
+
     private static void ExpandSlots(LobbyInterface ui)
     {
+        _ui = ui;
         var grid = ui.GetComponentInChildren<GridLayoutGroup>(true);
         if (grid == null) { MelonLogger.Error("Could not find GridLayoutGroup in LobbyInterface"); return; }
         var entries = grid.transform;
