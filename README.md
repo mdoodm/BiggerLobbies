@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner-1.0.7.svg" alt="BiggerLobbies: a Schedule I lobby with 20 player slots, 4 from the base game and 16 added by the mod, and up to 250 with the MaxPlayers setting" width="100%">
+  <img src="assets/banner-lobbies.svg" alt="BiggerLobbies: bigger lobbies for Schedule I. 4 slots in the base game, 16 more by default, and up to 250 with the MaxPlayers setting" width="100%">
 </p>
 
 <p align="center">
@@ -128,7 +128,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | What you saw | What the fork does |
 |---|---|
 | The mod didn't load on 0.4.7 | Patches the game's new lobby code |
-| The game crashed when the mod set the player limit | Applies the 20-player limit when the lobby is created |
+| The game crashed when the mod set the player limit | Applies the player limit when the lobby is created |
 | The lobby said 20, but a 6th player couldn't connect | Raises the Steam transport's connection limit to the lobby size (fixed in 1.0.7) |
 | Friends joined but stayed stuck in the main menu | Creates only one Steam lobby per host |
 | No way to invite anyone after loading a save directly | Creates a lobby before the save loads |
@@ -251,7 +251,7 @@ Still stuck? [Open an issue](https://github.com/mdoodm/BiggerLobbies/issues) wit
 
 | Feature | Status |
 |---|---|
-| 20-player lobbies | The Steam connection limit is raised to the lobby size when a save loads (seen in the log) |
+| Lobby size | The Steam connection limit is raised to the lobby size when a save loads (seen in the log) |
 | `MaxPlayers` above 20 | Lobby screen checked at 40 and 100 slots. A save ran with 250 simulated players at a playable frame rate |
 | Always online, joining a started game | Tested with one friend joining through Steam's Join Game |
 | Rejoin after a crash | Tested over several crash-and-rejoin cycles |

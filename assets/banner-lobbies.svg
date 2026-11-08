@@ -83,11 +83,11 @@
 <rect x="1159" y="317" width="36" height="9" rx="4.5" fill="#1B2633" fill-opacity="0.55"/>
 <rect x="1159" y="331" width="24" height="7" rx="3.5" fill="#1B2633" fill-opacity="0.3"/>
 <text x="72" y="150" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="78" font-weight="800" letter-spacing="-2" fill="#ECE7DD">BiggerLobbies</text>
-<text x="74" y="204" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="32" font-weight="500" fill="#9AA8B6">20-player lobbies for Schedule I</text>
+<text x="74" y="204" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="32" font-weight="500" fill="#9AA8B6">Host your whole crew in Schedule I</text>
 <rect x="74" y="246" width="28" height="28" rx="5" fill="#ECE7DD"/>
 <text x="112" y="269" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#ECE7DD">4 in the base game</text>
 <rect x="74" y="292" width="28" height="28" rx="5" fill="#F0A23B"/>
-<text x="112" y="315" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#ECE7DD">16 more with the mod</text>
+<text x="112" y="315" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#ECE7DD">16 more by default</text>
 <rect x="75.5" y="339.5" width="25" height="25" rx="4.5" fill="none" stroke="#F0A23B" stroke-width="3" stroke-dasharray="5 4"/>
 <text x="112" y="361" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#9AA8B6">Up to 250 with MaxPlayers</text>
 </svg>
