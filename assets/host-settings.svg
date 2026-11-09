@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="472" viewBox="0 0 1280 472" role="img" aria-labelledby="t d">
+<title id="t">Host settings</title>
+<desc id="d">The BiggerLobbies Host settings screen on the Players tab: three connected players with their ping and Kick and Ban buttons, and one player who left the game carrying items and $4,872, with a Take items button. Tabs: Players, Access, Lobby, Saving.</desc>
+<rect width="1280" height="472" rx="16" fill="#0b0d14"/>
+<text x="72" y="156" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="600" fill="#eef0f5" text-anchor="start" letter-spacing="-1.2">Run the room</text>
+<text x="74" y="200" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="24" font-weight="400" fill="#a3a9b8" text-anchor="start">Host settings, in the main and pause menus</text>
+<text x="74" y="258" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="500" fill="#eef0f5" text-anchor="start">Players</text>
+<text x="176" y="258" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="400" fill="#a3a9b8" text-anchor="start">Kick, ban, take back items</text>
+<text x="74" y="298" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="500" fill="#eef0f5" text-anchor="start">Access</text>
+<text x="176" y="298" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="400" fill="#a3a9b8" text-anchor="start">Whitelist, saved crews, bans</text>
+<text x="74" y="338" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="500" fill="#eef0f5" text-anchor="start">Lobby</text>
+<text x="176" y="338" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="400" fill="#a3a9b8" text-anchor="start">Who can join, lobby size</text>
+<text x="74" y="378" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="500" fill="#eef0f5" text-anchor="start">Saving</text>
+<text x="176" y="378" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="400" fill="#a3a9b8" text-anchor="start">Autosave and Save now</text>
+<rect x="588" y="40" width="628" height="392" rx="16" fill="#11141c"/>
+<rect x="588.5" y="40.5" width="627" height="391" rx="15.5" fill="none" stroke="#eef0f5" stroke-opacity="0.08"/>
+<rect x="612" y="58" width="64" height="30" rx="6" fill="#2a2f3b"/>
+<text x="644.0" y="78" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Back</text>
+<text x="902.0" y="80" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="600" fill="#eef0f5" text-anchor="middle">Host settings</text>
+<rect x="1162" y="58" width="30" height="30" rx="6" fill="#2a2f3b"/>
+<path d="M1172 68 l10 10 M1182 68 l-10 10" stroke="#eef0f5" stroke-width="2" stroke-linecap="round"/>
+<text x="612" y="124" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600" fill="#eef0f5" text-anchor="start">Players</text>
+<rect x="612" y="133" width="67.2" height="3" rx="1.5" fill="#d95fc8"/>
+<text x="711.2" y="124" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="500" fill="#7a8296" text-anchor="start">Access</text>
+<text x="800.8000000000001" y="124" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="500" fill="#7a8296" text-anchor="start">Lobby</text>
+<text x="880.8000000000001" y="124" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="500" fill="#7a8296" text-anchor="start">Saving</text>
+<text x="1192" y="124" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="400" fill="#a3a9b8" text-anchor="end">Banned Kai for 1 day</text>
+<line x1="612" y1="140" x2="1192" y2="140" stroke="#eef0f5" stroke-opacity="0.08"/>
+<text x="612" y="172" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="600" fill="#eef0f5" text-anchor="start">In the game</text>
+<text x="716" y="172" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="600" fill="#7a8296" text-anchor="start">3</text>
+<rect x="612" y="186" width="580" height="132" rx="10" fill="#eef0f5" fill-opacity="0.035"/>
+<rect x="612" y="230" width="580" height="44" fill="#eef0f5" fill-opacity="0.025"/>
+<rect x="624" y="194" width="28" height="28" rx="5" fill="#e9e6df"/>
+<circle cx="638.0" cy="205.2" r="4.8" fill="#0b0d14" fill-opacity="0.55"/>
+<path d="M629.6 222 q0 -8.4 8.4 -8.4 h11.2 q8.4 0 8.4 8.4 z" fill="#0b0d14" fill-opacity="0.55"/>
+<circle cx="650" cy="220" r="4.5" fill="#7fcf6a" stroke="#11141c" stroke-width="2"/>
+<text x="666" y="214" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="500" fill="#7fcf6a" text-anchor="start">Mara</text>
+<text x="992" y="214" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#a3a9b8" text-anchor="end">42 ms</text>
+<rect x="1008" y="193" width="84" height="30" rx="6" fill="#2a2f3b"/>
+<text x="1050.0" y="213" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Kick</text>
+<rect x="1100" y="193" width="84" height="30" rx="6" fill="#2a2f3b"/>
+<text x="1142.0" y="213" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Ban</text>
+<rect x="624" y="238" width="28" height="28" rx="5" fill="#e9e6df"/>
+<circle cx="638.0" cy="249.2" r="4.8" fill="#0b0d14" fill-opacity="0.55"/>
+<path d="M629.6 266 q0 -8.4 8.4 -8.4 h11.2 q8.4 0 8.4 8.4 z" fill="#0b0d14" fill-opacity="0.55"/>
+<circle cx="650" cy="264" r="4.5" fill="#7fcf6a" stroke="#11141c" stroke-width="2"/>
+<text x="666" y="258" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="500" fill="#7fcf6a" text-anchor="start">Dutch</text>
+<text x="992" y="258" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#a3a9b8" text-anchor="end">88 ms</text>
+<rect x="1008" y="237" width="84" height="30" rx="6" fill="#2a2f3b"/>
+<text x="1050.0" y="257" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Kick</text>
+<rect x="1100" y="237" width="84" height="30" rx="6" fill="#2a2f3b"/>
+<text x="1142.0" y="257" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Ban</text>
+<rect x="624" y="282" width="28" height="28" rx="5" fill="#e9e6df"/>
+<circle cx="638.0" cy="293.2" r="4.8" fill="#0b0d14" fill-opacity="0.55"/>
+<path d="M629.6 310 q0 -8.4 8.4 -8.4 h11.2 q8.4 0 8.4 8.4 z" fill="#0b0d14" fill-opacity="0.55"/>
+<circle cx="650" cy="308" r="4.5" fill="#7fcf6a" stroke="#11141c" stroke-width="2"/>
+<text x="666" y="302" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="500" fill="#7fcf6a" text-anchor="start">Rook</text>
+<text x="992" y="302" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#a3a9b8" text-anchor="end">131 ms</text>
+<rect x="1008" y="281" width="84" height="30" rx="6" fill="#2a2f3b"/>
+<text x="1050.0" y="301" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Kick</text>
+<rect x="1100" y="281" width="84" height="30" rx="6" fill="#2a2f3b"/>
+<text x="1142.0" y="301" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Ban</text>
+<text x="612" y="358" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="600" fill="#eef0f5" text-anchor="start">Left the game</text>
+<text x="734" y="358" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="600" fill="#7a8296" text-anchor="start">1</text>
+<rect x="612" y="372" width="580" height="44" rx="10" fill="#eef0f5" fill-opacity="0.035"/>
+<rect x="624" y="380" width="28" height="28" rx="5" fill="#e9e6df"/>
+<circle cx="638.0" cy="391.2" r="4.8" fill="#0b0d14" fill-opacity="0.55"/>
+<path d="M629.6 408 q0 -8.4 8.4 -8.4 h11.2 q8.4 0 8.4 8.4 z" fill="#0b0d14" fill-opacity="0.55"/>
+<text x="666" y="394" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="500" fill="#eef0f5" text-anchor="start">Vinnie</text>
+<text x="666" y="409" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="400" fill="#7a8296" text-anchor="start">Left 12 min ago</text>
+<rect x="790" y="379" width="30" height="30" rx="6" fill="#000" fill-opacity="0.35"/>
+<rect x="799" y="384" width="12" height="16" rx="3" fill="#b9d27a"/>
+<text x="818" y="407" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="11" font-weight="600" fill="#eef0f5" text-anchor="end">20</text>
+<rect x="826" y="379" width="30" height="30" rx="6" fill="#000" fill-opacity="0.35"/>
+<rect x="835" y="384" width="12" height="16" rx="3" fill="#d9b26a"/>
+<text x="854" y="407" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="11" font-weight="600" fill="#eef0f5" text-anchor="end">12</text>
+<rect x="862" y="379" width="30" height="30" rx="6" fill="#000" fill-opacity="0.35"/>
+<rect x="871" y="384" width="12" height="16" rx="3" fill="#9fb6d9"/>
+<text x="890" y="407" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="11" font-weight="600" fill="#eef0f5" text-anchor="end">8</text>
+<text x="906" y="400" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600" fill="#7fcf6a" text-anchor="start">$4,872</text>
+<rect x="1062" y="379" width="122" height="30" rx="6" fill="#2f5f8c"/>
+<text x="1123.0" y="399" font-family="Segoe UI, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="500" fill="#eef0f5" text-anchor="middle">Take items</text>
+</svg>
