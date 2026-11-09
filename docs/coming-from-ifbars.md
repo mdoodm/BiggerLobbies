@@ -22,7 +22,9 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | Rejoining after a crash | Blocked | Supported |
 | Saving | Only at sleep or a clean quit | Every 5 min, players every 30 s, and when someone drops |
 | Plant water and growth | Can differ between players | Same for everyone |
-| Settings | None | 9, plus 2 testing tools |
+| Host controls | None | Host settings: lobby type, live lobby size, kick, timed bans, whitelist and saved crews, take items back from players who left |
+| Strangers in an Open lobby | Kicked as they load in | Can play |
+| Settings | None | 15, plus 2 testing tools, most of them also in Host settings |
 | Builds | Mono and Il2Cpp | Il2Cpp (Mono left as it was) |
 
 ## Issues fixed
