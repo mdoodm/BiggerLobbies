@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Il2CppFishNet;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.UI;
@@ -58,6 +59,22 @@ public static class HostSettingsMenu
         public string LastPlayersKey = "", LastWhiteKey = "", LastBlackKey = "";
         public ulong ConfirmBlacklist;
         public readonly List<(Button b, TimeSpan? len)> BanLenButtons = new();
+        public TextMeshProUGUI CrewsHeading = null!;
+        public TextMeshProUGUI DepartedHeading = null!;
+        public RectTransform Departed = null!;
+        public string LastDepartedKey = "", LastTakenKey = "";
+        public TextMeshProUGUI TakenHeading = null!;
+        public RectTransform TakenList = null!;
+        public readonly List<Toggle> Tabs = new();
+        public readonly List<TextMeshProUGUI> TabLabels = new();
+        public readonly List<GameObject> Pages = new();
+        public int Tab;
+        public RectTransform CrewList = null!;
+        public TMP_InputField? CrewName;
+        public string LastCrewKey = "", ConfirmDeleteCrew = "";
+        public Button WorldOff = null!, WorldOn = null!, PlayersOff = null!, PlayersOn = null!;
+        public Slider WorldEvery = null!, PlayersEvery = null!;
+        public TextMeshProUGUI WorldValue = null!, PlayersValue = null!, LastSave = null!;
         public readonly Dictionary<int, TextMeshProUGUI> PingTexts = new();
         public readonly List<(GameObject row, string name)> PickerRows = new();
         public TMP_InputField? Search;
@@ -112,7 +129,7 @@ public static class HostSettingsMenu
             }
             if (ui == null) continue;
             if (inGame) _pause = ui; else _menu = ui;
-            MelonLogger.Msg($"Host settings added to the {(inGame ? "pause" : "main")} menu");
+            Utils.Log.Info($"Host settings added to the {(inGame ? "pause" : "main")} menu");
             yield break;
         }
     }
@@ -148,6 +165,7 @@ public static class HostSettingsMenu
         ui.Picker = CloneScreen(settings, ui.Screen, "Add from friends", ui, false);
         ui.PickerTitle = ui.Picker.transform.Find("Title").GetComponent<TextMeshProUGUI>();
         BuildMain(ui);
+        SetupTabs(ui);
         Header(ui, ui.Screen, () => ui.Screen.Close(), true);
         Header(ui, ui.Picker, () => ui.Picker.Close(), false);
         ActivateOnce(ui.Screen);
@@ -185,6 +203,16 @@ public static class HostSettingsMenu
 
         var old = go.GetComponent<SettingsScreen>();
         int prio = old != null ? old.ExitInputPriority : 0;
+
+        // The game's category tabs are toggles; keep their bar on the main screen.
+        var tabToggles = new List<Toggle>();
+        if (keepTemplates && old != null && old.Categories != null)
+            for (int i = 0; i < old.Categories.Length; i++)
+            {
+                var t = old.Categories[i]?.Toggle;
+                if (t != null) tabToggles.Add(t);
+            }
+        Transform? tabBar = tabToggles.Count >= 4 ? tabToggles[0].transform.parent : null;
         if (old != null) UnityEngine.Object.DestroyImmediate(old);
 
         var rt = go.GetComponent<RectTransform>();
@@ -194,7 +222,9 @@ public static class HostSettingsMenu
         for (int i = go.transform.childCount - 1; i >= 0; i--)
         {
             var c = go.transform.GetChild(i);
-            if (c.name != "Background" && c.name != "Title" && c.name != "Content") UnityEngine.Object.DestroyImmediate(c.gameObject);
+            if (c.name == "Background" || c.name == "Title" || c.name == "Content") continue;
+            if (tabBar != null && tabBar.IsChildOf(c)) continue;   // the tab bar or its holder
+            UnityEngine.Object.DestroyImmediate(c.gameObject);
         }
         go.transform.Find("Title").GetComponent<TextMeshProUGUI>().text = title;
 
@@ -209,6 +239,12 @@ public static class HostSettingsMenu
         var layout = controls.Find("ControlsPanel/Scroll View/Viewport/Vertical Layout").GetComponent<RectTransform>();
         var lvlg = layout.GetComponent<VerticalLayoutGroup>();
         if (lvlg != null) { lvlg.spacing = 4; lvlg.padding = new RectOffset(20, 20, 16, 40); lvlg.childAlignment = TextAnchor.UpperLeft; }
+
+        if (tabBar != null)
+        {
+            for (int i = tabToggles.Count - 1; i >= 4; i--) UnityEngine.Object.DestroyImmediate(tabToggles[i].gameObject);
+            for (int i = 0; i < 4; i++) ui.Tabs.Add(tabToggles[i]);
+        }
 
         if (keepTemplates)
         {
@@ -298,7 +334,7 @@ public static class HostSettingsMenu
             float extra = step * removed;
             rt.sizeDelta = new Vector2(rt.sizeDelta.x, rt.sizeDelta.y - extra);
             rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, rt.anchoredPosition.y + (1f - rt.pivot.y) * extra);
-            MelonLogger.Msg($"Removed {removed} leftover Host settings button(s) from an earlier visit to this menu");
+            Utils.Log.Info($"Removed {removed} leftover Host settings button(s) from an earlier visit to this menu");
         }
     }
 
@@ -357,16 +393,33 @@ public static class HostSettingsMenu
         return rt;
     }
 
-    private static RectTransform Box(Ui ui, Transform parent)
+    private static RectTransform Box(Ui ui, Transform parent, bool card = false)
     {
-        var go = new GameObject("Box");
+        var go = new GameObject(card ? "Card" : "Box");
         var rt = go.AddComponent<RectTransform>();
         rt.SetParent(parent, false);
         rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
         rt.sizeDelta = new Vector2(ui.RowW, 0);
+        if (card)
+        {
+            // The panel lives on its own child that the layout ignores; an Image on the card
+            // itself would report the sprite's size as the card's preferred height.
+            var bgo = new GameObject("Bg");
+            var brt = bgo.AddComponent<RectTransform>();
+            brt.SetParent(rt, false);
+            brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
+            brt.offsetMin = Vector2.zero; brt.offsetMax = Vector2.zero;
+            bgo.AddComponent<LayoutElement>().ignoreLayout = true;
+            var bg = bgo.AddComponent<Image>();
+            var src = ui.ButtonT.GetComponent<Image>();
+            if (src != null) { bg.sprite = src.sprite; bg.type = src.type; bg.pixelsPerUnitMultiplier = src.pixelsPerUnitMultiplier; }
+            bg.color = new Color(1f, 1f, 1f, 0.035f);
+            bg.raycastTarget = false;
+        }
         var v = go.AddComponent<VerticalLayoutGroup>();
-        v.spacing = 4; v.childControlWidth = false; v.childControlHeight = false;
+        v.spacing = card ? 0 : 4; v.childControlWidth = false; v.childControlHeight = false;
+        if (card) v.padding = new RectOffset(0, 0, 4, 4);
         v.childForceExpandWidth = false; v.childForceExpandHeight = false;
         var f = go.AddComponent<ContentSizeFitter>();
         f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -404,6 +457,7 @@ public static class HostSettingsMenu
     private static readonly Color Blocked = new(0.86f, 0.36f, 0.32f, 1f);
     private static readonly Color Danger = new(0.70f, 0.22f, 0.20f, 1f);     // button red: white text stays readable
     private static TimeSpan? _banLength;                                      // null = permanent
+    private static bool _prefsDirty;                                          // autosave sliders: write the file once dragging stops
     private static Sprite? _circle, _fade;
     private static bool _spritesSearched;
 
@@ -487,6 +541,59 @@ public static class HostSettingsMenu
         return Text(ui, r, s, x, ui.RowW - x, Muted, 12);
     }
 
+    private static readonly string[] TabNames = { "Players", "Access", "Lobby", "Saving" };
+
+    private static void SetupTabs(Ui ui)
+    {
+        if (ui.Tabs.Count < 4)
+        {
+            // No tab bar found: show every page, one under the other, as before.
+            foreach (var pg in ui.Pages) pg.SetActive(true);
+            MelonLogger.Warning("Host settings: the game's tab bar wasn't found; showing one long page");
+            return;
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            int idx = i;
+            var t = ui.Tabs[i];
+            t.gameObject.name = "Tab " + TabNames[i];
+            var lab = t.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (lab != null) { lab.text = TabNames[i]; lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Overflow; }
+            ui.TabLabels.Add(lab!);
+            t.onValueChanged = new Toggle.ToggleEvent();
+            t.onValueChanged.AddListener((UnityAction<bool>)(on => { if (on) ShowTab(ui, idx); }));
+        }
+        ShowTab(ui, 0);
+    }
+
+    private static void ShowTab(Ui ui, int i)
+    {
+        ui.Tab = i;
+        for (int j = 0; j < ui.Pages.Count; j++) ui.Pages[j].SetActive(ui.Tabs.Count < 4 || j == i);
+        for (int j = 0; j < ui.Tabs.Count; j++) ui.Tabs[j].SetIsOnWithoutNotify(j == i);
+        var sr = ui.Layout.GetComponentInParent<ScrollRect>();
+        if (sr != null) sr.verticalNormalizedPosition = 1f;
+    }
+
+    private static void RefreshTabLabels(Ui ui)
+    {
+        if (ui.TabLabels.Count < 4) return;
+        int players = HostPlayers.List().Count;
+        if (ui.TabLabels[0] != null) ui.TabLabels[0].text = players > 0 ? $"Players {players}" : "Players";
+    }
+
+    // Small overlapping avatar for a crew's member preview.
+    private static void MiniAvatar(Transform row, ulong steamId, float x)
+    {
+        var go = new GameObject("Mini");
+        var rt = go.AddComponent<RectTransform>();
+        rt.SetParent(row, false);
+        Place(rt, x, 24, 24);
+        var img = go.AddComponent<RawImage>();
+        img.raycastTarget = false;
+        Avatars.Show(img, steamId);
+    }
+
     // Steam profile picture with the presence dot on its corner (the screen's signature).
     private static void Avatar(Transform row, ulong steamId, Color? dot)
     {
@@ -548,13 +655,24 @@ public static class HostSettingsMenu
         var sgo = UnityEngine.Object.Instantiate(ui.TextT, screen.transform);
         sgo.name = "Status";
         var srt = sgo.GetComponent<RectTransform>();
-        srt.anchorMin = new Vector2(0, 1); srt.anchorMax = new Vector2(1, 1);
-        srt.pivot = new Vector2(0.5f, 0.5f);
-        srt.anchoredPosition = new Vector2(0, -56);
-        srt.sizeDelta = new Vector2(-280, 18);
+        if (main && ui.Tabs.Count >= 4)
+        {
+            // Main screen: the tab bar sits under the title, so the status goes at the right end of that row.
+            srt.anchorMin = srt.anchorMax = new Vector2(1, 1);
+            srt.pivot = new Vector2(1, 0.5f);
+            srt.anchoredPosition = new Vector2(-24, -66);
+            srt.sizeDelta = new Vector2(320, 20);
+        }
+        else
+        {
+            srt.anchorMin = new Vector2(0, 1); srt.anchorMax = new Vector2(1, 1);
+            srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.anchoredPosition = new Vector2(0, -56);
+            srt.sizeDelta = new Vector2(-280, 18);
+        }
         var st = sgo.GetComponent<TextMeshProUGUI>();
         st.text = ""; st.fontSize = 12; st.color = Muted; st.richText = false;
-        st.alignment = TextAlignmentOptions.Center;
+        st.alignment = main && ui.Tabs.Count >= 4 ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.Center;
         st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
         if (main) ui.Status = st; else ui.PickerStatus = st;
     }
@@ -600,7 +718,10 @@ public static class HostSettingsMenu
     private static void BuildMain(Ui ui)
     {
         FindSprites();
-        var L = ui.Layout;
+        var root = ui.Layout;
+        // One page per tab, in tab order; only the selected one is active.
+        for (int i = 0; i < 4; i++) { var pg = Box(ui, root); pg.name = "Page " + TabNames[i]; ui.Pages.Add(pg.gameObject); }
+        Transform L = ui.Pages[2].transform;
 
         // Lobby
         Section(ui, L, "Lobby", out _, first: true);
@@ -650,7 +771,8 @@ public static class HostSettingsMenu
         ui.SizeHint = Hint(ui, L, "");
 
         // Whitelist
-        ui.WhiteHeading = Section(ui, L, "Whitelist", out var wrow);
+        L = ui.Pages[1].transform;
+        ui.WhiteHeading = Section(ui, L, "Whitelist", out var wrow, first: true);
         RightBtn(ui, wrow, "Add friends", 0, 140, () => OpenPicker(ui, true));
         Spacer(ui, L, 0);
         var w = Row(ui, L, RowH);
@@ -659,14 +781,43 @@ public static class HostSettingsMenu
         ui.WlOn = Btn(ui, w, "On", ControlX + 128, 120, () => { Whitelist.SetEnabled(true); SetStatus(ui, "Whitelist on. Players already here stay"); RefreshStatic(ui); _nextRefresh = 0; });
         Hint(ui, L, "Starts empty each game. Bans always win");
         Spacer(ui, L, 4);
-        ui.White = Box(ui, L);
+        ui.White = Box(ui, L, card: true);
+
+        // Saved crews
+        ui.CrewsHeading = Section(ui, L, "Saved crews", out _);
+        Spacer(ui, L, 0);
+        var cr = Row(ui, L, RowH);
+        Text(ui, cr, "Save whitelist as", LabelX, ControlX - LabelX - 8);
+        ui.CrewName = InputBox(ui, cr, ControlX, ui.RowW - ControlX - 152, "Crew name", 24);
+        RightBtn(ui, cr, "Save crew", 0, 140, () =>
+        {
+            SetStatus(ui, Crews.SaveCurrent(ui.CrewName?.text ?? ""));
+            if (ui.CrewName != null) ui.CrewName.text = "";
+            _nextRefresh = 0;
+        });
+        Hint(ui, L, "Loading a crew replaces the whitelist with it and turns the whitelist on");
+        Spacer(ui, L, 4);
+        ui.CrewList = Box(ui, L, card: true);
 
         // Players
-        ui.PlayersHeading = Section(ui, L, "Players", out _);
-        Spacer(ui, L, 0);
-        ui.Players = Box(ui, L);
+        L = ui.Pages[0].transform;
+        ui.PlayersHeading = Section(ui, L, "In the game", out _, first: true);
+        Hint(ui, L, "Kick lets them rejoin. Ban keeps them out for the ban length set on Access. Players with BiggerLobbies are told why", LabelX);
+        Spacer(ui, L, 4);
+        ui.Players = Box(ui, L, card: true);
+
+        ui.DepartedHeading = Section(ui, L, "Left the game", out _);
+        Hint(ui, L, "Saved players who aren't here and still carry items. Take items moves their items and cash to you", LabelX);
+        Spacer(ui, L, 4);
+        ui.Departed = Box(ui, L, card: true);
+
+        ui.TakenHeading = Section(ui, L, "Taken items", out _);
+        Hint(ui, L, "What you took in this save. Originals are backed up in UserData/BiggerLobbies/Taken", LabelX);
+        Spacer(ui, L, 4);
+        ui.TakenList = Box(ui, L, card: true);
 
         // Banned players
+        L = ui.Pages[1].transform;
         ui.BlackHeading = Section(ui, L, "Banned", out var brow);
         RightBtn(ui, brow, "Ban friends", 0, 140, () => OpenPicker(ui, false));
         Spacer(ui, L, 0);
@@ -682,9 +833,26 @@ public static class HostSettingsMenu
         }
         Hint(ui, L, "Used for the next ban. Bans are saved between games and end on their own");
         Spacer(ui, L, 4);
-        ui.Black = Box(ui, L);
+        ui.Black = Box(ui, L, card: true);
 
-        BottomFade(L);
+        // Autosave
+        L = ui.Pages[3].transform;
+        Section(ui, L, "Autosave", out var arow, first: true);
+        RightBtn(ui, arow, "Save now", 0, 140, () => { SetStatus(ui, AutoSave.SaveNow()); _nextRefresh = 0; });
+        Spacer(ui, L, 0);
+        var wr = Row(ui, L, RowH);
+        Text(ui, wr, "World saves", LabelX, ControlX - LabelX - 8);
+        ui.WorldOff = Btn(ui, wr, "Off", ControlX, 120, () => { AutoSave.WorldEnabled = false; MelonPreferences.Save(); SetStatus(ui, "World autosave off"); RefreshStatic(ui); });
+        ui.WorldOn = Btn(ui, wr, "On", ControlX + 128, 120, () => { AutoSave.WorldEnabled = true; MelonPreferences.Save(); SetStatus(ui, "World autosave on"); RefreshStatic(ui); });
+        ui.WorldEvery = SliderRow(ui, L, "Every", 1, 60, AutoSave.WorldMinutes, out ui.WorldValue, v => { AutoSave.WorldMinutes = v; ui.WorldValue.text = $"{v} min"; _prefsDirty = true; });
+        var pr = Row(ui, L, RowH);
+        Text(ui, pr, "Player saves", LabelX, ControlX - LabelX - 8);
+        ui.PlayersOff = Btn(ui, pr, "Off", ControlX, 120, () => { AutoSave.PlayersEnabled = false; MelonPreferences.Save(); SetStatus(ui, "Player saves off"); RefreshStatic(ui); });
+        ui.PlayersOn = Btn(ui, pr, "On", ControlX + 128, 120, () => { AutoSave.PlayersEnabled = true; MelonPreferences.Save(); SetStatus(ui, "Player saves on"); RefreshStatic(ui); });
+        ui.PlayersEvery = SliderRow(ui, L, "Every", 10, 300, AutoSave.PlayerSeconds, out ui.PlayersValue, v => { AutoSave.PlayerSeconds = v; ui.PlayersValue.text = $"{v} s"; _prefsDirty = true; });
+        ui.LastSave = Hint(ui, L, "");
+
+        BottomFade(root);
         RefreshStatic(ui);
     }
 
@@ -707,6 +875,21 @@ public static class HostSettingsMenu
         if (ui.PrivacyHint != null) ui.PrivacyHint.text = PrivacyHint(LobbyPrivacy.Current);
         Highlight(ui.WlOff, !Whitelist.Enabled);
         Highlight(ui.WlOn, Whitelist.Enabled);
+        Highlight(ui.WorldOff, !AutoSave.WorldEnabled);
+        Highlight(ui.WorldOn, AutoSave.WorldEnabled);
+        Highlight(ui.PlayersOff, !AutoSave.PlayersEnabled);
+        Highlight(ui.PlayersOn, AutoSave.PlayersEnabled);
+        if (!_prefsDirty)
+        {
+            ui.WorldEvery.SetValueWithoutNotify(AutoSave.WorldMinutes);
+            ui.PlayersEvery.SetValueWithoutNotify(AutoSave.PlayerSeconds);
+        }
+        ui.WorldValue.text = $"{AutoSave.WorldMinutes} min";
+        ui.PlayersValue.text = $"{AutoSave.PlayerSeconds} s";
+        var since = AutoSave.SecondsSinceLastSave();
+        ui.LastSave.text = since == null ? "Saves run while you host a save"
+            : since.Value < 60 ? "Last save under a minute ago"
+            : $"Last save {Mathf.FloorToInt(since.Value / 60f)} min ago";
         if (_pendingSize < 0)
         {
             ui.Size.SetValueWithoutNotify(LobbySize.MaxPlayers);
@@ -725,6 +908,7 @@ public static class HostSettingsMenu
         for (int i = box.childCount - 1; i >= 0; i--)
         {
             var g = box.GetChild(i).gameObject;
+            if (g.name == "Bg") continue;
             g.SetActive(false);
             UnityEngine.Object.Destroy(g);
         }
@@ -732,15 +916,134 @@ public static class HostSettingsMenu
 
     private static void Empty(Ui ui, Transform box, string s)
     {
-        var r = Row(ui, box, 28);
+        var r = Row(ui, box, 36);
         Text(ui, r, s, LabelX, ui.RowW - LabelX, Muted, 13);
+    }
+
+    // Nested size-to-content layouts settle one level per pass, so a list that changes while
+    // the screen is open would keep its old height and overlap the section below. Rebuild
+    // the list, then its page, then the scroll content, in that order.
+    private static void Relayout(Ui ui, RectTransform box)
+    {
+        try
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(box);
+            if (box.parent is RectTransform page) LayoutRebuilder.ForceRebuildLayoutImmediate(page);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(ui.Layout);
+        }
+        catch { }
+    }
+
+    // Every other row in a card gets a faint stripe, so long lists stay easy to follow.
+    private static void Stripe(Transform box)
+    {
+        int n = 0;
+        for (int i = 0; i < box.childCount; i++)
+        {
+            var c = box.GetChild(i);
+            if (!c.gameObject.activeSelf || c.name == "Bg") continue;
+            if (n++ % 2 == 0) continue;
+            if (c.GetComponent<Image>() != null) continue;
+            var img = c.gameObject.AddComponent<Image>();
+            img.color = new Color(1f, 1f, 1f, 0.025f);
+            img.raycastTarget = false;
+        }
+    }
+
+    private static string TakenAgo(DateTime utc)
+    {
+        var d = DateTime.UtcNow - utc;
+        if (d.TotalMinutes < 1) return "Just now";
+        if (d.TotalMinutes < 60) return $"{Math.Floor(d.TotalMinutes)} min ago";
+        if (d.TotalHours < 48) return $"{Math.Floor(d.TotalHours)} h ago";
+        return $"{Math.Floor(d.TotalDays)} days ago";
+    }
+
+    private static string Ago(DateTime utc)
+    {
+        var d = DateTime.UtcNow - utc;
+        if (d.TotalMinutes < 1) return "Left just now";
+        if (d.TotalMinutes < 60) return $"Left {Math.Floor(d.TotalMinutes)} min ago";
+        if (d.TotalHours < 48) return $"Left {Math.Floor(d.TotalHours)} h ago";
+        return $"Left {Math.Floor(d.TotalDays)} days ago";
+    }
+
+    // An item icon with its count in the corner, like the game's own inventory slots.
+    private static void ItemChip(Ui ui, Transform row, DepartedPlayers.Slot slot, float x)
+    {
+        var go = new GameObject("Item");
+        var rt = go.AddComponent<RectTransform>();
+        rt.SetParent(row, false);
+        Place(rt, x, 30, 30);
+        var bg = go.AddComponent<Image>();
+        var src = ui.ButtonT.GetComponent<Image>();
+        if (src != null) { bg.sprite = src.sprite; bg.type = src.type; bg.pixelsPerUnitMultiplier = src.pixelsPerUnitMultiplier; }
+        bg.color = new Color(0f, 0f, 0f, 0.35f);
+        bg.raycastTarget = false;
+
+        var icon = DepartedPlayers.Icon(slot.Item);
+        if (icon != null)
+        {
+            var ig = new GameObject("Icon");
+            var irt = ig.AddComponent<RectTransform>();
+            irt.SetParent(rt, false);
+            irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
+            irt.offsetMin = new Vector2(3, 3); irt.offsetMax = new Vector2(-3, -3);
+            var img = ig.AddComponent<Image>();
+            img.sprite = icon; img.preserveAspect = true; img.raycastTarget = false;
+        }
+        var qgo = UnityEngine.Object.Instantiate(ui.TextT, rt);
+        qgo.name = "Qty";
+        var qrt = qgo.GetComponent<RectTransform>();
+        qrt.anchorMin = qrt.anchorMax = new Vector2(1, 0);
+        qrt.pivot = new Vector2(1, 0);
+        qrt.anchoredPosition = new Vector2(-1, -1);
+        qrt.sizeDelta = new Vector2(30, 14);
+        var q = qgo.GetComponent<TextMeshProUGUI>();
+        q.text = icon == null ? DepartedPlayers.SafeName(slot.Item, slot.Id) : (slot.Quantity > 1 ? slot.Quantity.ToString() : "");
+        q.fontSize = icon == null ? 8 : 11; q.richText = false;
+        q.alignment = icon == null ? TextAlignmentOptions.Center : TextAlignmentOptions.BottomRight;
+        q.enableWordWrapping = false;
+        q.overflowMode = TextOverflowModes.Ellipsis;
     }
 
     private static void RefreshLists(Ui ui, bool force)
     {
+        // Saved crews
+        ui.CrewsHeading.text = Heading("Saved crews", Crews.All.Count);
+        var ck = string.Join("|", Crews.All.Select(c => c.Name + ":" + c.Members.Count)) + "|" + ui.ConfirmDeleteCrew;
+        if (force || ck != ui.LastCrewKey)
+        {
+            ui.LastCrewKey = ck;
+            Clear(ui.CrewList);
+            if (Crews.All.Count == 0) Empty(ui, ui.CrewList, "No crews yet. Fill the whitelist, then save it here");
+            foreach (var c in Crews.All)
+            {
+                var crew = c;
+                var r = Row(ui, ui.CrewList, RowH);
+                Text(ui, r, crew.Name, LabelX, ControlX - LabelX - 8, plain: true);
+                int shown = Math.Min(4, crew.Members.Count);
+                for (int i = 0; i < shown; i++) MiniAvatar(r, crew.Members[i].SteamId, ControlX + i * 20);
+                string names = string.Join(", ", crew.Members.Take(2).Select(m => m.Name.Length > 0 ? m.Name : m.SteamId.ToString()));
+                if (crew.Members.Count > 2) names += $" +{crew.Members.Count - 2}";
+                float tx = ControlX + shown * 20 + 12;
+                Text(ui, r, names, tx, ui.RowW - tx - 220, Muted, 13, plain: true);
+                RightBtn(ui, r, "Load", 108, 100, () => { SetStatus(ui, Crews.Load(crew.Name)); ui.ConfirmDeleteCrew = ""; RefreshStatic(ui); _nextRefresh = 0; });
+                bool confirming = ui.ConfirmDeleteCrew == crew.Name;
+                var del = RightBtn(ui, r, confirming ? "Confirm" : "Delete", 0, 100, () =>
+                {
+                    if (ui.ConfirmDeleteCrew == crew.Name) { Crews.Delete(crew.Name); ui.ConfirmDeleteCrew = ""; SetStatus(ui, $"Deleted {crew.Name}"); }
+                    else { ui.ConfirmDeleteCrew = crew.Name; SetStatus(ui, $"Click Confirm to delete {crew.Name}"); }
+                    _nextRefresh = 0;
+                });
+                if (confirming) { var cc = del.colors; cc.normalColor = Danger; cc.selectedColor = Danger; del.colors = cc; }
+            }
+            Stripe(ui.CrewList); Relayout(ui, ui.CrewList);
+        }
+
         // Players
         var players = HostPlayers.List();
-        ui.PlayersHeading.text = Heading("Players", players.Count);
+        ui.PlayersHeading.text = Heading("In the game", players.Count);
         var pk = string.Join("|", players.ConvertAll(p => $"{p.ClientId}:{p.SteamId}:{p.Name}")) + "|" + ui.ConfirmBlacklist + InstanceFinder.IsServer;
         if (force || pk != ui.LastPlayersKey)
         {
@@ -769,6 +1072,57 @@ public static class HostSettingsMenu
                 if (confirming) { var cc = bb.colors; cc.normalColor = Danger; cc.selectedColor = Danger; bb.colors = cc; }
                 bb.interactable = row.SteamId != 0;
             }
+            Stripe(ui.Players); Relayout(ui, ui.Players);
+        }
+
+        // Left the game
+        var gone = DepartedPlayers.List();
+        ui.DepartedHeading.text = Heading("Left the game", gone.Count);
+        var dk = string.Join("|", gone.Select(g => $"{g.SteamId}:{g.Cash:0}:{string.Join(",", g.Items.Select(i => i.Id + i.Quantity))}:{Ago(g.SavedUtc)}")) + InstanceFinder.IsServer;
+        if (force || dk != ui.LastDepartedKey)
+        {
+            ui.LastDepartedKey = dk;
+            Clear(ui.Departed);
+            if (gone.Count == 0)
+                Empty(ui, ui.Departed, InstanceFinder.IsServer ? "Nobody has left with anything" : "Players who leave with items appear here while you host");
+            foreach (var g in gone)
+            {
+                var who = g;
+                var r = Row(ui, ui.Departed, 48);
+                Avatar(r, who.SteamId, null);
+                var nm = Text(ui, r, who.Name, NameX, 150, plain: true);
+                nm.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, 8);
+                var meta = Text(ui, r, Ago(who.SavedUtc), NameX, 150, Muted, 11);
+                meta.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, -10);
+                float x = NameX + 158;
+                int shown = Math.Min(6, who.Items.Count);
+                for (int i = 0; i < shown; i++) { ItemChip(ui, r, who.Items[i], x); x += 34; }
+                if (who.Items.Count > shown) { Text(ui, r, $"+{who.Items.Count - shown}", x + 2, 36, Muted, 12); x += 40; }
+                if (who.Cash >= 0.01f) Text(ui, r, $"${who.Cash:N0}", x + 4, ui.RowW - x - 150, Playing, 13);
+                RightBtn(ui, r, "Take items", 0, 130, () => { SetStatus(ui, DepartedPlayers.Take(who.SteamId)); DepartedPlayers.Invalidate(); _nextRefresh = 0; });
+            }
+            Stripe(ui.Departed); Relayout(ui, ui.Departed);
+        }
+
+        // Taken items
+        var log = DepartedPlayers.History();
+        ui.TakenHeading.text = Heading("Taken items", log.Count);
+        var tk = string.Join("|", log.Select(t => $"{t.Utc.Ticks}:{TakenAgo(t.Utc)}"));
+        if (force || tk != ui.LastTakenKey)
+        {
+            ui.LastTakenKey = tk;
+            Clear(ui.TakenList);
+            if (log.Count == 0) Empty(ui, ui.TakenList, "Nothing taken in this save");
+            foreach (var t in log)
+            {
+                var r = Row(ui, ui.TakenList, RowH);
+                MiniAvatar(r, t.SteamId, LabelX);
+                Text(ui, r, t.Name.Length > 0 ? t.Name : t.SteamId.ToString(), LabelX + 28, 150, plain: true);
+                Text(ui, r, t.Summary, LabelX + 186, ui.RowW - LabelX - 186 - 112, Muted, 13, plain: true);
+                var when = Text(ui, r, TakenAgo(t.Utc), ui.RowW - 104, 96, Muted, 12);
+                when.alignment = TextAlignmentOptions.MidlineRight;
+            }
+            Stripe(ui.TakenList); Relayout(ui, ui.TakenList);
         }
         foreach (var p in players)
             if (ui.PingTexts.TryGetValue(p.ClientId, out var pt) && pt != null)
@@ -794,6 +1148,7 @@ public static class HostSettingsMenu
                 else if (st == Friends.Presence.Offline) nt.color = Muted;
                 RightBtn(ui, r, "Remove", 0, 100, () => { Whitelist.Remove(id); SetStatus(ui, $"Removed {name} from the whitelist"); _nextRefresh = 0; });
             }
+            Stripe(ui.White); Relayout(ui, ui.White);
         }
 
         // Banned players (the key holds the time left, so the countdown updates)
@@ -813,6 +1168,7 @@ public static class HostSettingsMenu
                 Text(ui, r, BanList.Remaining(e), NameX + 268, 200, e.Permanent ? Blocked : Muted, 13);
                 RightBtn(ui, r, "Unban", 0, 100, () => { BanList.Unban(id); SetStatus(ui, $"Unbanned {name}"); _nextRefresh = 0; });
             }
+            Stripe(ui.Black); Relayout(ui, ui.Black);
         }
     }
 
@@ -914,13 +1270,49 @@ public static class HostSettingsMenu
         }
     }
 
+    // The game's slider row, laid on the control column. The value label sits after the bar.
+    private static Slider SliderRow(Ui ui, Transform parent, string label, int min, int max, int value, out TextMeshProUGUI valueText, Action<int> onChange)
+    {
+        var go = UnityEngine.Object.Instantiate(ui.SliderT, parent);
+        go.name = "Slider " + label;
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.sizeDelta = new Vector2(ui.RowW, RowH);
+        var lab = go.transform.Find("Label").GetComponent<TextMeshProUGUI>();
+        lab.text = label;
+        Place(lab.GetComponent<RectTransform>(), LabelX, ControlX - LabelX - 8, 30);
+        var slider = go.GetComponentInChildren<Slider>(true);
+        Place(slider.GetComponent<RectTransform>(), ControlX, 376, 20);
+        var vt = slider.transform.Find("Value").GetComponent<TextMeshProUGUI>();
+        var vrt = vt.GetComponent<RectTransform>();
+        vrt.anchorMin = vrt.anchorMax = new Vector2(1, 0.5f);
+        vrt.pivot = new Vector2(0, 0.5f);
+        vrt.anchoredPosition = new Vector2(16, 0);
+        vrt.sizeDelta = new Vector2(72, 30);
+        vt.alignment = TextAlignmentOptions.MidlineLeft;
+        slider.onValueChanged = new Slider.SliderEvent();
+        slider.wholeNumbers = true;
+        slider.minValue = min; slider.maxValue = max;
+        slider.SetValueWithoutNotify(value);
+        slider.onValueChanged.AddListener((UnityAction<float>)(v => { try { onChange(Mathf.RoundToInt(v)); } catch { } }));
+        valueText = vt;
+        return slider;
+    }
+
     // A search field in the game's style: rounded dark box, the game's font, a muted placeholder.
     private static TMP_InputField SearchBox(Ui ui, Transform row)
     {
-        var box = new GameObject("SearchBox");
+        var input = InputBox(ui, row, LabelX, ui.RowW - LabelX, "Search friends", 32);
+        input.onValueChanged.AddListener((UnityAction<string>)(q => FilterPicker(ui, q)));
+        return input;
+    }
+
+    private static TMP_InputField InputBox(Ui ui, Transform row, float x, float w, string hint, int limit)
+    {
+        var box = new GameObject("InputBox");
         var brt = box.AddComponent<RectTransform>();
         brt.SetParent(row, false);
-        Place(brt, LabelX, ui.RowW - LabelX, 32);
+        Place(brt, x, w, 32);
         var bg = box.AddComponent<Image>();
         var btnImg = ui.ButtonT.GetComponent<Image>();
         if (btnImg != null) { bg.sprite = btnImg.sprite; bg.type = btnImg.type; bg.pixelsPerUnitMultiplier = btnImg.pixelsPerUnitMultiplier; }
@@ -949,7 +1341,7 @@ public static class HostSettingsMenu
             return t;
         }
 
-        var placeholder = MakeText("Placeholder", "Search friends", Muted);
+        var placeholder = MakeText("Placeholder", hint, Muted);
         var text = MakeText("Text", "", Color.white);
 
         var input = box.AddComponent<TMP_InputField>();
@@ -961,9 +1353,8 @@ public static class HostSettingsMenu
         input.caretColor = Color.white;
         input.customCaretColor = true;
         input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.45f);
-        input.characterLimit = 32;
+        input.characterLimit = limit;
         input.richText = false;
-        input.onValueChanged.AddListener((UnityAction<string>)(q => FilterPicker(ui, q)));
         return input;
     }
 
@@ -978,9 +1369,11 @@ public static class HostSettingsMenu
     private static void Open(Ui ui)
     {
         ui.ConfirmBlacklist = 0;
+        ui.ConfirmDeleteCrew = "";
+        ShowTab(ui, ui.InGame ? 0 : 2);
         RefreshStatic(ui);
         RefreshLists(ui, true);
-        SetStatus(ui, ui.InGame || HostLobby.TryGet(out _) ? "" : "These apply when you host a save.");
+        SetStatus(ui, ui.InGame || HostLobby.TryGet(out _) ? "" : "These apply when you host a save");
         ActivateOnce(ui.Screen);
         ActivateOnce(ui.Picker);
         ui.Screen.Open();
@@ -1006,6 +1399,7 @@ public static class HostSettingsMenu
         if (_menu != null) ShowMenuButton(_menu, !InOthersLobby());
 
         var ui = Visible();
+        HideBigLobbyGrid(ui != null);
         bool dragging = false;
         try { dragging = ui != null && Mouse.current != null && Mouse.current.leftButton.isPressed; } catch { }
         if (_pendingSize >= 0 && (ui == null || (!dragging && Time.unscaledTime >= _applySizeAt)))
@@ -1015,13 +1409,14 @@ public static class HostSettingsMenu
             foreach (var u in new[] { _pause, _menu })
                 if (u != null) { try { SetStatus(u, msg); RefreshStatic(u); } catch { } }
         }
+        if (_prefsDirty && !dragging) { _prefsDirty = false; MelonPreferences.Save(); }
         if (ui == null) return;
         if (_pendingSize >= 0) ui.SizeValue.text = _pendingSize.ToString();
 
         if (Time.unscaledTime >= _nextRefresh)
         {
             _nextRefresh = Time.unscaledTime + 1f;
-            if (ui.Screen.IsOpen) { RefreshStatic(ui); RefreshLists(ui, false); }
+            if (ui.Screen.IsOpen) { RefreshStatic(ui); RefreshLists(ui, false); RefreshTabLabels(ui); }
         }
     }
 
@@ -1034,6 +1429,32 @@ public static class HostSettingsMenu
             catch { }
         }
         return null;
+    }
+
+    // The game's lobby avatar grid (top right) draws over Host settings once it's more than two
+    // rows tall (40+ players). Hide it while the screen is open; the Players tab lists everyone.
+    private static GameObject? _hiddenGrid;
+
+    private static void HideBigLobbyGrid(bool screenOpen)
+    {
+        try
+        {
+            if (!screenOpen)
+            {
+                if (_hiddenGrid != null) { if (!_hiddenGrid.WasCollected) _hiddenGrid.SetActive(true); _hiddenGrid = null; }
+                return;
+            }
+            if (_hiddenGrid != null) return;
+            var grid = LobbySize.Grid;
+            if (grid == null || grid.WasCollected || !grid.gameObject.activeInHierarchy) return;
+            int shown = 0;
+            var t = grid.transform;
+            for (int i = 0; i < t.childCount; i++) if (t.GetChild(i).gameObject.activeSelf) shown++;
+            if (shown <= 41) return;   // invite button + two rows of 20
+            _hiddenGrid = grid.gameObject;
+            _hiddenGrid.SetActive(false);
+        }
+        catch { }
     }
 
     private static bool InOthersLobby()

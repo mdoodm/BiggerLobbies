@@ -50,7 +50,7 @@ Two settings let you check a big lobby on your own. They're for testing only: se
 
 | Setting | What it does |
 |---|---|
-| `DebugFakePlayers` | Fills the lobby screen with this many placeholder players, to check the layout |
+| `DebugFakePlayers` | Fills the lobby screen and the Host settings Players tab with this many test players, to check the layout. Test players borrow your Steam friends' names and avatars, and can't be kicked or banned |
 | `DebugDummyPlayers` | 10 seconds after a save loads, spawns this many copies of your character walking around you, and logs your frame rate every 10 seconds |
 
 A frame-rate line looks like this:

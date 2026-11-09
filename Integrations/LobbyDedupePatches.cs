@@ -21,7 +21,7 @@ public static class LobbyDedupePatches
     private static bool _openInviteWhenReady;
     private static SteamLobbyService? _service;
 
-    private static void Log(string s) => MelonLogger.Msg($"[diag] {s}");
+    private static void Log(string s) => Utils.Log.Info($"[diag] {s}");
 
     private static bool CreatePending =>
         _pendingSince >= 0f && Time.realtimeSinceStartup - _pendingSince < PendingTimeout;

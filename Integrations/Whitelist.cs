@@ -28,7 +28,7 @@ public static class Whitelist
     {
         _enabled = cat.CreateEntry("WhitelistEnabled", false, "Whitelist",
             "When true, only players you add to the whitelist in Host settings can join. The list starts empty every time you start the game.");
-        if (Enabled) MelonLogger.Msg("Whitelist is on: only players you add in Host settings can join, and the list starts empty");
+        if (Enabled) Utils.Log.Info("Whitelist is on: only players you add in Host settings can join, and the list starts empty");
     }
 
     public static void SetEnabled(bool on)
@@ -36,7 +36,7 @@ public static class Whitelist
         if (_enabled == null || _enabled.Value == on) return;
         _enabled.Value = on;
         MelonPreferences.Save();
-        MelonLogger.Msg(on ? "Whitelist turned on" : "Whitelist turned off");
+        Utils.Log.Info(on ? "Whitelist turned on" : "Whitelist turned off");
     }
 
     public static void WarnIfEmpty()
@@ -53,13 +53,27 @@ public static class Whitelist
         if (id == 0 || BanList.IsBanned(id)) return false;
         if (Contains(id)) return true;
         _allowed.Add(new BanList.Entry(id, name ?? ""));
-        MelonLogger.Msg($"Whitelisted {name} ({id}) for this session");
+        Utils.Log.Info($"Whitelisted {name} ({id}) for this session");
         return true;
+    }
+
+    /// <summary>Replaces the whole list (for loading a saved crew). Banned players are left off. Returns how many were added.</summary>
+    public static int Replace(IEnumerable<BanList.Entry> members)
+    {
+        _allowed.Clear();
+        int n = 0;
+        foreach (var m in members)
+        {
+            if (m.SteamId == 0 || BanList.IsBanned(m.SteamId) || Contains(m.SteamId)) continue;
+            _allowed.Add(new BanList.Entry(m.SteamId, m.Name ?? ""));
+            n++;
+        }
+        return n;
     }
 
     public static void Remove(ulong id)
     {
-        if (_allowed.RemoveAll(e => e.SteamId == id) > 0) MelonLogger.Msg($"Removed {id} from the whitelist");
+        if (_allowed.RemoveAll(e => e.SteamId == id) > 0) Utils.Log.Info($"Removed {id} from the whitelist");
     }
 
     /// <summary>Called when a connection sends its Steam login. Disconnects players who aren't listed.</summary>
@@ -70,9 +84,9 @@ public static class Whitelist
         if (!_lastRefusedLog.TryGetValue(steamId, out float last) || now - last > 60f)
         {
             _lastRefusedLog[steamId] = now;
-            MelonLogger.Msg($"Refused {Friends.NameOf(steamId)} ({steamId}): not on the whitelist");
+            Utils.Log.Info($"Refused {Friends.NameOf(steamId)} ({steamId}): not on the whitelist");
         }
-        try { conn.Disconnect(true); } catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect player: {e.Message}"); }
+        KickNotice.Remove(conn, steamId, KickNotice.Kind.Whitelist);
         return true;
     }
 }

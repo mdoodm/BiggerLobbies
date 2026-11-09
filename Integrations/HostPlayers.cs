@@ -40,6 +40,42 @@ public static class HostPlayers
         public ulong SteamId;   // from the Steam login the host checked; 0 if unknown
         public int Ping;        // ms, -1 unknown
         public int ClientId;
+        public bool Fake;       // DebugFakePlayers test entry: borrows a friend's name and avatar, can't be kicked or banned
+    }
+
+    private static List<Row>? _fakes;
+    private static int _fakeCount = -1;
+
+    // Test entries for DebugFakePlayers, so the Players tab can be checked at size without real players.
+    private static void AddFakes(List<Row> rows)
+    {
+        int want = LobbySize.FakePlayers;
+        if (want <= 0) return;
+        if (_fakes == null || _fakeCount != want)
+        {
+            _fakeCount = want;
+            _fakes = new List<Row>();
+            var friends = Friends.List();
+            for (int i = 0; i < want; i++)
+            {
+                bool useFriend = friends.Count > 0;
+                var f = useFriend ? friends[i % friends.Count] : default;
+                _fakes.Add(new Row
+                {
+                    Name = useFriend ? (i < friends.Count ? f.Name : $"{f.Name} {i / friends.Count + 1}") : $"Test player {i + 1}",
+                    SteamId = useFriend ? f.SteamId : 0,
+                    ClientId = -1000 - i,
+                    Fake = true,
+                });
+            }
+        }
+        float t = UnityEngine.Time.unscaledTime;
+        for (int i = 0; i < _fakes.Count; i++)
+        {
+            var r = _fakes[i];
+            r.Ping = 30 + (i * 37) % 140 + (int)(UnityEngine.Mathf.PerlinNoise(i * 0.7f, t * 0.3f) * 25);
+            rows.Add(r);
+        }
     }
 
     public static List<Row> List()
@@ -68,27 +104,29 @@ public static class HostPlayers
             }
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't read the player list: {e.Message}"); }
+        try { if (InstanceFinder.IsServer) AddFakes(rows); } catch { }
         return rows;
     }
 
     /// <summary>Disconnects the player, and bans them first if asked (null length = permanent). Returns a status line.</summary>
     public static string Kick(Row r, bool ban, TimeSpan? length = null)
     {
+        if (r.Fake) return $"{r.Name} is a test player (DebugFakePlayers). Nothing to {(ban ? "ban" : "kick")}";
         try
         {
             if (ban) { BanList.Ban(r.SteamId, r.Name, length); return $"Banned {r.Name} ({BanLength.Label(length).ToLowerInvariant()})"; }
             var conn = FindConnection(r.ClientId);
             if (conn == null) return $"{r.Name} has already left";
             if (conn.IsLocalClient) return "";
-            conn.Disconnect(true);
-            MelonLogger.Msg($"Kicked {r.Name}{(r.SteamId != 0 ? $" ({r.SteamId})" : "")}");
+            KickNotice.Remove(conn, r.SteamId, KickNotice.Kind.Kick);
+            Utils.Log.Info($"Kicked {r.Name}{(r.SteamId != 0 ? $" ({r.SteamId})" : "")}");
             return $"Kicked {r.Name}. They can rejoin unless you ban them";
         }
         catch (Exception e) { return $"Couldn't remove {r.Name}: {e.Message}"; }
     }
 
     /// <summary>Disconnects every connected player whose checked Steam ID is this one.</summary>
-    public static void DisconnectSteamId(ulong id)
+    public static void DisconnectSteamId(ulong id, TimeSpan? length = null)
     {
         try
         {
@@ -100,8 +138,8 @@ public static class HostPlayers
                 var c = list[i]?.Connection;
                 if (c == null || c.IsLocalClient || !c.IsActive) continue;
                 if (BanList.VerifiedSteamId(c.ClientId) != id) continue;
-                c.Disconnect(true);
-                MelonLogger.Msg($"Disconnected {list[i].PlayerName} ({id}): banned");
+                KickNotice.Remove(c, id, KickNotice.Kind.Ban, length);
+                Utils.Log.Info($"Disconnected {list[i].PlayerName} ({id}): banned");
             }
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect banned player: {e.Message}"); }

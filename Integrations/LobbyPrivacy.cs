@@ -31,7 +31,7 @@ public static class LobbyPrivacy
         if (v.Equals("Public", StringComparison.OrdinalIgnoreCase)) v = nameof(Mode.Open);
         if (Enum.TryParse(v, true, out Mode m) && Enum.IsDefined(typeof(Mode), m)) Current = m;
         else MelonLogger.Warning($"LobbyPrivacy '{_entry.Value}' isn't Private, FriendsOnly or Open; using FriendsOnly");
-        if (Current != Mode.FriendsOnly) MelonLogger.Msg($"Lobby privacy: {Label(Current)}");
+        if (Current != Mode.FriendsOnly) Utils.Log.Info($"Lobby privacy: {Label(Current)}");
     }
 
     public static string Label(Mode m) => m switch
@@ -54,7 +54,7 @@ public static class LobbyPrivacy
         var want = SteamType(Current);
         if (eLobbyType != want)
         {
-            MelonLogger.Msg($"Lobby privacy: {Label(Current)} (the game asked for {eLobbyType})");
+            Utils.Log.Info($"Lobby privacy: {Label(Current)} (the game asked for {eLobbyType})");
             eLobbyType = want;
         }
     }
@@ -80,7 +80,7 @@ public static class LobbyPrivacy
         bool ok;
         try { ok = SteamMatchmaking.SetLobbyType(id, SteamType(m)); }
         catch (Exception e) { MelonLogger.Warning($"SetLobbyType failed: {e.Message}"); ok = false; }
-        MelonLogger.Msg($"Lobby privacy changed to {Label(m)} on the open lobby: Steam {(ok ? "accepted" : "refused")} it");
+        Utils.Log.Info($"Lobby privacy changed to {Label(m)} on the open lobby: Steam {(ok ? "accepted" : "refused")} it");
         return ok ? $"Privacy is now {Label(m)}" : $"Steam refused the change. It applies when you next host.";
     }
 }

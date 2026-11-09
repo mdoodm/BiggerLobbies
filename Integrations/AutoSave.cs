@@ -34,11 +34,13 @@ public static class AutoSave
     public static void Init()
     {
         _cat = MelonPreferences.CreateCategory("BiggerLobbies");
+        Utils.Log.Init(_cat);
         LobbySize.Init(_cat);
         DebugDummies.Init(_cat);
         LobbyPrivacy.Init(_cat);
         BanList.Init(_cat);
         Whitelist.Init(_cat);
+        Crews.Init(_cat);
         HostSettingsMenu.Init(_cat);
         _enabled = _cat.CreateEntry("AutoSaveEnabled", true, "Host autosave enabled",
             "As host, periodically run the game's normal save so a crash doesn't lose progress since the last sleep.");
@@ -49,6 +51,48 @@ public static class AutoSave
         GrowSyncFix.Init(_cat);
         LateJoinFix.Init(_cat);
         AlwaysHostLobby.Init(_cat);
+    }
+
+    // --- For the Host settings screen. Values apply on the next check (every 5 s). ---
+    public static bool WorldEnabled { get => _enabled?.Value ?? false; set { if (_enabled != null) _enabled.Value = value; } }
+    public static int WorldMinutes { get => Math.Max(1, _minutes?.Value ?? 5); set { if (_minutes != null) _minutes.Value = Math.Clamp(value, 1, 60); } }
+    public static bool PlayersEnabled { get => _playerSaveEnabled?.Value ?? false; set { if (_playerSaveEnabled != null) _playerSaveEnabled.Value = value; } }
+    public static int PlayerSeconds { get => Math.Max(10, _playerSaveSeconds?.Value ?? 30); set { if (_playerSaveSeconds != null) _playerSaveSeconds.Value = Math.Clamp(value, 10, 300); } }
+
+    private static bool Hosting() =>
+        SceneManager.GetActiveScene().name == "Main" && InstanceFinder.IsServer;
+
+    /// <summary>Seconds since the game last saved, or null when not hosting a save.</summary>
+    public static float? SecondsSinceLastSave()
+    {
+        try
+        {
+            if (!Hosting()) return null;
+            var save = PersistentSingleton<SaveManager>.Instance;
+            return save == null ? null : save.SecondsSinceLastSave;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>Runs the game's full save now. Returns a status line.</summary>
+    public static string SaveNow()
+    {
+        try
+        {
+            if (!Hosting()) return "Load a save as host to save";
+            var save = PersistentSingleton<SaveManager>.Instance;
+            if (save == null) return "The game isn't ready to save";
+            if (save.IsSaving) return "Already saving";
+            var sleep = NetworkSingleton<SleepController>.Instance;
+            if (sleep != null && sleep.IsSleepInProgress) return "Can't save while everyone's sleeping";
+            save.Save();
+            return "Saved";
+        }
+        catch (Exception e)
+        {
+            MelonLogger.Error($"Save now failed: {e}");
+            return "Save failed. See the log";
+        }
     }
 
     public static void Update()
@@ -72,7 +116,7 @@ public static class AutoSave
             {
                 // A client dropped (crash or quit). Save everything now so the host can
                 // restart the session without losing progress.
-                MelonLogger.Msg("A player left; saving now");
+                Utils.Log.Info("A player left; saving now");
                 save.Save();
                 return;
             }
@@ -118,7 +162,7 @@ public static class AutoSave
         float interval = Math.Max(1, _minutes!.Value) * 60f;
         if (save.SecondsSinceLastSave < interval) return false; // the game resets this on every save
 
-        MelonLogger.Msg($"Autosaving (last save {save.SecondsSinceLastSave / 60f:0.0} min ago)");
+        Utils.Log.Info($"Autosaving (last save {save.SecondsSinceLastSave / 60f:0.0} min ago)");
         save.Save();
         return true;
     }
@@ -151,7 +195,7 @@ public static class AutoSave
 
         if (saved != _lastPlayerCount)
         {
-            if (saved > 0) MelonLogger.Msg($"Saving {saved} connected player(s) every {Math.Max(10, _playerSaveSeconds!.Value)} s");
+            if (saved > 0) Utils.Log.Info($"Saving {saved} connected player(s) every {Math.Max(10, _playerSaveSeconds!.Value)} s");
             _lastPlayerCount = saved;
         }
     }

@@ -65,11 +65,11 @@ public static class AlwaysHostLobby
                 string? why = WhyNotOnline();
                 if (why != null)
                 {
-                    MelonLogger.Msg($"Always host lobby: {why}; loading solo");
+                    Utils.Log.Info($"Always host lobby: {why}; loading solo");
                     return true;
                 }
 
-                MelonLogger.Msg("Always host lobby: creating a Steam lobby before loading");
+                Utils.Log.Info("Always host lobby: creating a Steam lobby before loading");
                 _waiting = true; _created = false; _failed = false;
                 lobby.CreateLobby();
                 MelonCoroutines.Start(WaitThenLoad(__instance, info, allowLoadStacking, allowSaveBackup));
@@ -112,8 +112,8 @@ public static class AlwaysHostLobby
                 }
             }
             catch { }
-            if (inLobby || _created) { MelonLogger.Msg("Always host lobby: lobby ready; loading as host"); break; }
-            if (_failed) { MelonLogger.Msg("Always host lobby: loading solo"); break; }
+            if (inLobby || _created) { Utils.Log.Info("Always host lobby: lobby ready; loading as host"); break; }
+            if (_failed) { Utils.Log.Info("Always host lobby: loading solo"); break; }
             if (UnityEngine.Time.realtimeSinceStartup > deadline)
             {
                 MelonLogger.Warning($"Always host lobby: no answer from Steam after {TimeoutSeconds:0} s; loading solo");

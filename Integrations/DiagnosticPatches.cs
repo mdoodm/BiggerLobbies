@@ -11,7 +11,7 @@ namespace BiggerLobbies.Integrations;
 public static class DiagnosticPatches
 {
     private static string Id(Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase? o) => o == null ? "null" : o.Pointer.ToString("X");
-    private static void Log(string s) => MelonLogger.Msg($"[diag] {s}");
+    private static void Log(string s) => Utils.Log.Info($"[diag] {s}");
 
     [HarmonyPrefix, HarmonyPatch(typeof(Lobby), nameof(Lobby.Awake))]
     private static void Lobby_Awake(Lobby __instance) => Log($"Lobby.Awake lobby={Id(__instance)}");

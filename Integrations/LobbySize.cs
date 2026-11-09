@@ -49,7 +49,7 @@ public static class LobbySize
         if (FakePlayers > 0)
             MelonLogger.Warning($"DebugFakePlayers is {FakePlayers}: the lobby screen shows placeholder players for testing. Set it back to 0 to play normally.");
 
-        MelonLogger.Msg($"Lobby size: {MaxPlayers} players");
+        Utils.Log.Info($"Lobby size: {MaxPlayers} players");
     }
 
     // --- Network transport ---------------------------------------------------------
@@ -86,12 +86,12 @@ public static class LobbySize
         {
             steam._maximumClients = (ushort)MaxPlayers;
             try { if (steam._server != null) steam.SetMaximumClients(MaxPlayers); } catch { }
-            MelonLogger.Msg($"Steam transport player limit raised from {before} to {MaxPlayers} ({when})");
+            Utils.Log.Info($"Steam transport player limit raised from {before} to {MaxPlayers} ({when})");
             _lastLogged = MaxPlayers;
         }
         else if (before != _lastLogged)
         {
-            MelonLogger.Msg($"Steam transport player limit is {before}; lobby size {MaxPlayers} fits ({when})");
+            Utils.Log.Info($"Steam transport player limit is {before}; lobby size {MaxPlayers} fits ({when})");
             _lastLogged = before;
         }
     }
@@ -132,7 +132,7 @@ public static class LobbySize
         string transportPart = SetSteamLimit(n);
         HarmonyPatches.RefreshLobbyScreen();
         string msg = $"Lobby size changed from {before} to {n} while running: {steamPart}; {transportPart}";
-        MelonLogger.Msg(msg);
+        Utils.Log.Info(msg);
         return $"Lobby size {n}. {steamPart}";
     }
 
@@ -180,6 +180,7 @@ public static class LobbySize
     public static int MaxShown => PerRow * MaxRows; // 100
 
     private static GridLayoutGroup? _grid;
+    public static GridLayoutGroup? Grid => _grid;
     private static float _cellX = 75f, _origSpacingX = -150f, _spacingY;
     private static bool _loggedLayout;
 
@@ -194,7 +195,7 @@ public static class LobbySize
         try
         {
             var rt = grid.GetComponent<RectTransform>();
-            MelonLogger.Msg($"[diag] lobby row: constraint={grid.constraint} count={grid.constraintCount} cell={grid.cellSize} spacing={grid.spacing} " +
+            Utils.Log.Info($"[diag] lobby row: constraint={grid.constraint} count={grid.constraintCount} cell={grid.cellSize} spacing={grid.spacing} " +
                             $"start={grid.startCorner}/{grid.startAxis} align={grid.childAlignment} anchors={rt.anchorMin}-{rt.anchorMax} pos={rt.anchoredPosition}");
         }
         catch { }

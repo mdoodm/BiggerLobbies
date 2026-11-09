@@ -2,6 +2,24 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## 1.0.9
+
+### Added
+- **Take items** from players who left. The Players tab has a new **Left the game** section listing saved players who aren't connected and still carry items, with their item icons and cash. Take items moves their items (as many stacks as fit) and their cash into your inventory, and removes them from their saved inventory, so they don't get them back if they rejoin. A copy of their original inventory is kept in `UserData/BiggerLobbies/Taken`. It waits a few seconds after someone leaves so their own exit save lands first.
+- Lists in Host settings sit on quiet panels with alternating rows, and each section has a one-line description.
+- `DebugFakePlayers` (testing only) now also fills the Players tab with test entries that borrow your Steam friends' names and avatars. They can't be kicked or banned.
+- **Tabs in Host settings**, using the game's own tab bar: Players (who's connected, kick, ban), Access (whitelist, saved crews, bans), Lobby (who can join, size) and Saving (autosave). It opens on Players in game and on Lobby from the main menu.
+- **Saved crews** in Host settings. Save the current whitelist under a name, then load it in one click: it replaces the whitelist and turns it on. Banned players are left off. Each crew shows a few member avatars, with Load and Delete (Delete asks to confirm). Saved as `SavedCrews`.
+- **Autosave** in Host settings: world saves and player saves on or off, how often each runs, a Save now button, and when the game last saved. Changes apply without a restart.
+- **Taken items log** on the Players tab: who you took from, what, and when, for the save you're in.
+- **Kick and ban messages for players who have BiggerLobbies.** Instead of "Authentication Error" and a lobby that still shows everyone, they go back to the main menu with "Kicked by the host", "Banned from this lobby" (with the ban length) or "Not on the whitelist", and leave the Steam lobby. Players without the mod are disconnected as before.
+- Players you kick, ban or refuse no longer show on your lobby screen. A kicked player shows again if they rejoin; banned players stay hidden.
+- `DiagnosticLog` setting. The mod now only writes warnings and errors to the MelonLoader log; turn this on for the detailed lines when reporting a problem.
+
+### Fixed
+- A list that grew or shrank while Host settings was open (for example adding to the whitelist) overlapped the section below it.
+- In lobbies of 40+ players, the game's lobby avatar grid covered Host settings. It's hidden while the screen is open.
+
 ## 1.0.8
 
 ### Added

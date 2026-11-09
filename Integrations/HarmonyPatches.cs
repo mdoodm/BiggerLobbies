@@ -90,7 +90,7 @@ namespace BiggerLobbies.Integrations
             {
                 if (!__instance.IsInLobby)
                 {
-                    MelonLogger.Msg("Not currently in a lobby, creating one...");
+                    Utils.Log.Info("Not currently in a lobby, creating one...");
                     SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, Constants.MAX_PLAYERS);
                 }
                 
@@ -131,7 +131,7 @@ namespace BiggerLobbies.Integrations
                     SteamMatchmaking.SetLobbyData(lobbySteamID, "max_players", maxPlayersStr);
                     SteamMatchmaking.SetLobbyData(lobbySteamID, "num_slots", maxPlayersStr);
                     
-                    MelonLogger.Msg($"Set lobby max_players and num_slots to {Constants.MAX_PLAYERS}");
+                    Utils.Log.Info($"Set lobby max_players and num_slots to {Constants.MAX_PLAYERS}");
                 }
             }
             catch (Exception ex)

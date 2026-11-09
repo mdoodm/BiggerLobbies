@@ -68,13 +68,13 @@ public static class LateJoinFix
             int members = SteamMatchmaking.GetNumLobbyMembers(svc._lobbySteamID);
             if (members <= BiggerLobbies.Utils.Constants.VANILLA_LIMIT)
             {
-                MelonLogger.Msg($"Player joined mid-game ({members} in lobby); the game connects them itself");
+                Utils.Log.Info($"Player joined mid-game ({members} in lobby); the game connects them itself");
                 yield break;
             }
             _lastSend = UnityEngine.Time.realtimeSinceStartup;
             svc.SetLobbyData("ready", "true");
             svc.SendMessage("ready");
-            MelonLogger.Msg("Player joined mid-game; re-sent lobby 'ready' so they can connect");
+            Utils.Log.Info("Player joined mid-game; re-sent lobby 'ready' so they can connect");
         }
         catch (Exception e) { MelonLogger.Error($"Late join 'ready' re-send failed: {e}"); }
     }

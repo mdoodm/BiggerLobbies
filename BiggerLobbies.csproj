@@ -517,6 +517,9 @@
 		<Reference Include="Assembly-CSharp" Condition="'$(Configuration)'=='Il2cpp'">
 			<HintPath>$(ManagedPath)\Assembly-CSharp.dll</HintPath>
 		</Reference>
+		<Reference Include="Il2CppScheduleOne.Core" Condition="'$(Configuration)'=='Il2cpp'">
+			<HintPath>$(ManagedPath)\Il2CppScheduleOne.Core.dll</HintPath>
+		</Reference>
 		<Reference Include="Il2CppAstarPathfindingProject">
 			<HintPath>$(ManagedPath)\Il2CppAstarPathfindingProject.dll</HintPath>
 		</Reference>
@@ -904,11 +907,15 @@
 	  <Compile Include="Integrations\LobbyPrivacy.cs" />
 	  <Compile Include="Integrations\BanList.cs" />
 	  <Compile Include="Integrations\Whitelist.cs" />
+	  <Compile Include="Integrations\Crews.cs" />
+	  <Compile Include="Integrations\DepartedPlayers.cs" />
 	  <Compile Include="Integrations\Friends.cs" />
 	  <Compile Include="Integrations\Avatars.cs" />
 	  <Compile Include="Integrations\HostPlayers.cs" />
 	  <Compile Include="Integrations\HostSettingsMenu.cs" />
 	  <Compile Include="Utils\Constants.cs" />
+	  <Compile Include="Utils\Log.cs" />
+	  <Compile Include="Integrations\KickNotice.cs" />
 	</ItemGroup>
 
 	<PropertyGroup>

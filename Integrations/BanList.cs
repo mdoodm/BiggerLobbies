@@ -46,11 +46,11 @@ public static class BanList
                 if (_bans.All(b => b.SteamId != e.SteamId)) _bans.Add(e);
             old.Value = "";
             Store();
-            MelonLogger.Msg($"Moved {_bans.Count - before} ban(s) from the old Blacklist setting to BannedPlayers");
+            Utils.Log.Info($"Moved {_bans.Count - before} ban(s) from the old Blacklist setting to BannedPlayers");
         }
 
         Prune();
-        if (_bans.Count > 0) MelonLogger.Msg($"Banned players: {_bans.Count}");
+        if (_bans.Count > 0) Utils.Log.Info($"Banned players: {_bans.Count}");
     }
 
     private static void Parse(string? raw)
@@ -116,7 +116,7 @@ public static class BanList
         var ended = _bans.Where(b => b.Until.HasValue && b.Until.Value <= now).ToList();
         if (ended.Count == 0) return;
         _bans.RemoveAll(b => b.Until.HasValue && b.Until.Value <= now);
-        foreach (var e in ended) MelonLogger.Msg($"Ban ended for {(e.Name.Length > 0 ? e.Name + " " : "")}({e.SteamId})");
+        foreach (var e in ended) Utils.Log.Info($"Ban ended for {(e.Name.Length > 0 ? e.Name + " " : "")}({e.SteamId})");
         Store();
     }
 
@@ -164,8 +164,8 @@ public static class BanList
         Whitelist.Remove(id);
         _bans.Add(new Entry(id, Clean(name), until));
         Store();
-        MelonLogger.Msg($"Banned {Clean(name)} ({id}) {(until.HasValue ? "until " + until.Value.ToString("u", CultureInfo.InvariantCulture) : "permanently")}");
-        HostPlayers.DisconnectSteamId(id);
+        Utils.Log.Info($"Banned {Clean(name)} ({id}) {(until.HasValue ? "until " + until.Value.ToString("u", CultureInfo.InvariantCulture) : "permanently")}");
+        HostPlayers.DisconnectSteamId(id, length);
     }
 
     public static void Unban(ulong id)
@@ -173,7 +173,7 @@ public static class BanList
         int n = _bans.RemoveAll(b => b.SteamId == id);
         if (n == 0) return;
         Store();
-        MelonLogger.Msg($"Unbanned {id}");
+        Utils.Log.Info($"Unbanned {id}");
     }
 
     /// <summary>Called when a connection sends its Steam login. Disconnects banned players.</summary>
@@ -185,9 +185,10 @@ public static class BanList
         if (!_lastRefusedLog.TryGetValue(steamId, out float last) || now - last > 60f)
         {
             _lastRefusedLog[steamId] = now;
-            MelonLogger.Msg($"Refused {(e.Name.Length > 0 ? e.Name + " " : "")}({steamId}): banned, {Remaining(e).ToLowerInvariant()}");
+            Utils.Log.Info($"Refused {(e.Name.Length > 0 ? e.Name + " " : "")}({steamId}): banned, {Remaining(e).ToLowerInvariant()}");
         }
-        try { conn.Disconnect(true); } catch (Exception ex) { MelonLogger.Warning($"Couldn't disconnect banned player: {ex.Message}"); }
+        TimeSpan? left = e.Until.HasValue ? e.Until.Value - DateTime.UtcNow : null;
+        KickNotice.Remove(conn, steamId, KickNotice.Kind.Ban, left);
         return true;
     }
 }

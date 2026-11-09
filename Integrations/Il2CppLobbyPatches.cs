@@ -110,7 +110,7 @@ public static class HarmonyPatches
             SteamMatchmaking.SetLobbyMemberLimit(id, LobbySize.MaxPlayers);
             SteamMatchmaking.SetLobbyData(id, "max_players", n);
             SteamMatchmaking.SetLobbyData(id, "num_slots", n);
-            MelonLogger.Msg($"Lobby {result.m_ulSteamIDLobby} created with {LobbySize.MaxPlayers} slots");
+            Utils.Log.Info($"Lobby {result.m_ulSteamIDLobby} created with {LobbySize.MaxPlayers} slots");
         }
         catch (Exception e) { MelonLogger.Error($"Failed to set lobby limits: {e}"); }
     }

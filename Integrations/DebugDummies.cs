@@ -80,7 +80,7 @@ public static class DebugDummies
             _phase.Add(i);
         }
         Place(0f);
-        MelonLogger.Msg($"[dummies] spawned {_dummies.Count} dummy characters around you");
+        Utils.Log.Info($"[dummies] spawned {_dummies.Count} dummy characters around you");
     }
 
     // The local player's own body is hidden from the first-person camera (layer and
@@ -128,7 +128,7 @@ public static class DebugDummies
     {
         foreach (var go in _dummies)
             if (go != null) UnityEngine.Object.Destroy(go);
-        if (_dummies.Count > 0) MelonLogger.Msg($"[dummies] removed {_dummies.Count} dummy characters");
+        if (_dummies.Count > 0) Utils.Log.Info($"[dummies] removed {_dummies.Count} dummy characters");
         _dummies.Clear();
         _phase.Clear();
     }
@@ -149,7 +149,7 @@ public static class DebugDummies
         if (dt > 0f) _minFps = Math.Min(_minFps, 1f / dt);
         float elapsed = Time.realtimeSinceStartup - _fpsWindowStart;
         if (elapsed < 10f) return;
-        MelonLogger.Msg($"[dummies] {_dummies.Count} dummies: {_frames / elapsed:0} fps average, {_minFps:0} lowest (last {elapsed:0} s)");
+        Utils.Log.Info($"[dummies] {_dummies.Count} dummies: {_frames / elapsed:0} fps average, {_minFps:0} lowest (last {elapsed:0} s)");
         ResetFps();
     }
 }

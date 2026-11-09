@@ -56,14 +56,14 @@ public static class StaleAuthFix
                     return true; // vanilla path disconnects
                 }
                 __instance.SendAuthenticationResponse(conn, true);
-                MelonLogger.Msg($"Connection {conn.ClientId} sent authentication again; re-authenticated with Steam ({result})");
+                Utils.Log.Info($"Connection {conn.ClientId} sent authentication again; re-authenticated with Steam ({result})");
                 return false;
             }
 
             ulong id = auth.SteamId;
             if (id == 0) return true;
             PlatformAuth.EndAuthSession(new CSteamID(id));
-            MelonLogger.Msg($"Cleared any old Steam auth session for {id} before authenticating connection {conn.ClientId}");
+            Utils.Log.Info($"Cleared any old Steam auth session for {id} before authenticating connection {conn.ClientId}");
         }
         catch (Exception e) { MelonLogger.Error($"Steam auth fix failed: {e}"); }
         return true;

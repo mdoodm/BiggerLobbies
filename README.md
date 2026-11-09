@@ -20,7 +20,7 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 - **Invite whenever you like.** Your game goes online as your save loads, so friends can accept an invite or use Steam's **Join Game** at any point in the session.
 - **Crashes don't end the session.** A player whose game crashes can come straight back in, without you restarting.
 - **Nobody loses progress.** The world saves every 5 minutes, each player every 30 seconds, and everything saves the moment someone drops.
-- **You decide who gets in.** **Host settings** sits under Settings in the main menu and the pause menu (or press F6). Pick Private, Friends only or Open, change the lobby size without restarting, see everyone's ping, kick or ban players for an hour, a day, a week or for good, and keep a whitelist, all picked straight from your Steam friends.
+- **You decide who gets in.** **Host settings** sits under Settings in the main menu and the pause menu (or press F6). Pick Private, Friends only or Open, change the lobby size without restarting, see everyone's ping, kick or ban players for an hour, a day, a week or for good, take back items and cash from players who left with them, and keep a whitelist, all picked straight from your Steam friends.
 - **Everyone sees the same plants.** Water levels and growth stay in step for every player, so a watered pot never shows as dry.
 
 ## Install
@@ -51,6 +51,8 @@ Everything is on by default. After the first launch, change settings in `UserDat
 | `WhitelistEnabled` | `false` | Only players on the whitelist can join. The list starts empty each time you start the game |
 | `BannedPlayers` | empty | Banned Steam IDs, with an optional end time. Saved between games |
 | `HostPanelKey` | `F6` | Key that opens Host settings while you host |
+| `SavedCrews` | empty | Named whitelists. Easiest to manage in Host settings |
+| `DiagnosticLog` | `false` | Write detailed lines to the MelonLoader log. Only warnings and errors are logged otherwise |
 | `AlwaysHostLobby` | `true` | Go online automatically when you load a save |
 | `LateJoinEnabled` | `true` | Let players join a game that has already started |
 | `AutoSaveEnabled` | `true` | Save the world every few minutes, and when a player leaves |
