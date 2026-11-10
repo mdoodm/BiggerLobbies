@@ -20,9 +20,10 @@ namespace BiggerLobbies.Integrations;
 // drop out of the game but stay in the lobby with "Authentication Error".
 //
 // Host: before disconnecting someone, post a short notice in the lobby's own chat
-// ("bl1|kick|<steam id>|<kind>|<seconds>") and wait a moment so it arrives first.
+// ("bl1|kick|<steam id>|<kind>|<seconds>", plus "|<reason>" for a ban with a reason) and
+// wait a moment so it arrives first.
 // Players the host removed are also hidden from the host's lobby screen until they
-// leave or rejoin the Steam lobby; banned players stay hidden.
+// leave or rejoin the Steam lobby, or the host lets them in again; banned players stay hidden.
 //
 // Client with this mod: a notice from the lobby owner naming us takes us back to the
 // main menu with a clear popup and leaves the lobby. Vanilla clients log the line and
@@ -33,7 +34,8 @@ public static class KickNotice
     public enum Kind { Kick, Ban, Whitelist }
 
     private const string Prefix = "bl1|kick|";
-    private const float DisconnectDelay = 1.5f;
+    public const float DisconnectDelay = 1.5f;
+    public const float QuickDelay = 0.5f;   // refused at first login: nothing else is in flight
 
     // --- Host ------------------------------------------------------------------
 
@@ -43,23 +45,23 @@ public static class KickNotice
     /// <summary>True for players the host removed this session, or has banned.</summary>
     public static bool IsHidden(ulong id) => id != 0 && (_hidden.Contains(id) || BanList.IsBanned(id));
 
-    /// <summary>Tells the player (if they have the mod) why, hides them, then disconnects this connection.</summary>
-    public static void Remove(NetworkConnection? conn, ulong steamId, Kind kind, TimeSpan? length = null)
+    /// <summary>Tells the player (if they have the mod) why, hides them, then disconnects this connection after the delay.</summary>
+    public static void Remove(NetworkConnection? conn, ulong steamId, Kind kind, TimeSpan? length = null, string reason = "", float delay = DisconnectDelay)
     {
-        Send(steamId, kind, length);
+        Send(steamId, kind, length, reason);
         Hide(steamId);
-        if (conn != null) MelonCoroutines.Start(DisconnectLater(conn));
+        if (conn != null) MelonCoroutines.Start(DisconnectLater(conn, delay));
     }
 
-    private static IEnumerator DisconnectLater(NetworkConnection conn)
+    private static IEnumerator DisconnectLater(NetworkConnection conn, float delay)
     {
-        yield return new WaitForSecondsRealtime(DisconnectDelay);
+        yield return new WaitForSecondsRealtime(delay);
         try { if (conn.IsActive) conn.Disconnect(true); }
         catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect player: {e.Message}"); }
     }
 
     /// <summary>Posts the notice in the lobby chat. Repeats for the same player are spaced out.</summary>
-    public static void Send(ulong steamId, Kind kind, TimeSpan? length = null)
+    public static void Send(ulong steamId, Kind kind, TimeSpan? length = null, string reason = "")
     {
         try
         {
@@ -68,13 +70,36 @@ public static class KickNotice
             if (_lastSent.TryGetValue(steamId, out float last) && now - last < 3f) return;
             _lastSent[steamId] = now;
             long secs = length.HasValue ? (long)Math.Max(1, length.Value.TotalSeconds) : -1;
-            var bytes = Encoding.ASCII.GetBytes($"{Prefix}{steamId}|{kind.ToString().ToLowerInvariant()}|{secs}");
+            string why = kind == Kind.Ban ? Ascii(reason) : "";
+            var bytes = Encoding.ASCII.GetBytes($"{Prefix}{steamId}|{kind.ToString().ToLowerInvariant()}|{secs}{(why.Length > 0 ? "|" + why : "")}");
             var buf = new Il2CppStructArray<byte>(bytes.Length + 1);
             for (int i = 0; i < bytes.Length; i++) buf[i] = bytes[i];
             SteamMatchmaking.SendLobbyChatMsg(lobby, buf, buf.Length);
             Utils.Log.Info($"Sent {kind} notice to {steamId}");
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't send the kick notice: {e.Message}"); }
+    }
+
+    // Printable ASCII only, no '|', so the notice stays one short line every client can split.
+    private static string Ascii(string? s)
+    {
+        var sb = new StringBuilder();
+        foreach (char c in s ?? "") if (c >= 32 && c < 127 && c != '|') sb.Append(c);
+        var r = sb.ToString().Trim();
+        return r.Length > 60 ? r.Substring(0, 60) : r;
+    }
+
+    /// <summary>Shows a player on the lobby screen again; called when the host lets them in (StaleAuthFix).</summary>
+    public static void Unhide(ulong steamId)
+    {
+        try
+        {
+            if (steamId == 0 || !_hidden.Remove(steamId)) return;
+            try { HostLobby.Service()?.UpdateLobbyMembers(); } catch { }
+            HarmonyPatches.RefreshLobbyScreen();
+            Utils.Log.Info($"{steamId} was let in again; showing them on the lobby screen");
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't show a rejoined player again: {e.Message}"); }
     }
 
     private static void Hide(ulong steamId)
@@ -145,7 +170,7 @@ public static class KickNotice
             var parts = msg.Substring(Prefix.Length).Split('|');
             if (parts.Length < 3 || !ulong.TryParse(parts[0], out ulong target) || target != me) return;
             long.TryParse(parts[2], out long secs);
-            Show(parts[1], secs, SafeName(owner));
+            Show(parts[1], secs, SafeName(owner), parts.Length >= 4 ? parts[3].Trim() : "");
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't read a lobby message: {e.Message}"); }
     }
@@ -165,13 +190,13 @@ public static class KickNotice
         return $"for {Math.Ceiling(t.TotalDays)} days";
     }
 
-    private static void Show(string kind, long secs, string host)
+    private static void Show(string kind, long secs, string host, string reason)
     {
         switch (kind)
         {
             case "ban":
                 _title = "Banned from this lobby";
-                _text = $"{host} banned you {Span(secs)}.";
+                _text = reason.Length > 0 ? $"{host} banned you {Span(secs)}: {reason}." : $"{host} banned you {Span(secs)}.";
                 break;
             case "whitelist":
                 _title = "Not on the whitelist";
@@ -202,20 +227,28 @@ public static class KickNotice
     }
 
     // The disconnect that follows makes the game show its own error popup
-    // ("Authentication Error"). Show the host's reason instead.
+    // ("Authentication Error"). Show the host's reason instead, once, and only in place of
+    // an error popup, so later ordinary popups are left alone.
     [HarmonyPrefix]
     [HarmonyPatch(typeof(MainMenuPopup), nameof(MainMenuPopup.Open), new[] { typeof(MainMenuPopup.Data) })]
     private static void Open_Data_Prefix(ref MainMenuPopup.Data data)
     {
-        if (Recent && data != null && data.Title != _title) data = _notice!;
+        try
+        {
+            if (!Recent || data == null || data.Title == _title || !data.IsBad) return;
+            data = _notice!;
+            _notice = null;
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't replace the error popup: {e.Message}"); }
     }
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(MainMenuPopup), nameof(MainMenuPopup.Open), new[] { typeof(string), typeof(string), typeof(bool) })]
     private static void Open_Text_Prefix(ref string title, ref string description, ref bool isBad)
     {
-        if (!Recent || title == _title) return;
-        title = _title; description = _text; isBad = true;
+        if (!Recent || title == _title || !isBad) return;
+        title = _title; description = _text;
+        _notice = null;
     }
 }
 

@@ -41,6 +41,8 @@ public static class AutoSave
         BanList.Init(_cat);
         Whitelist.Init(_cat);
         Crews.Init(_cat);
+        ModHandshake.Init(_cat);
+        DiscordPresence.Init(_cat);
         HostSettingsMenu.Init(_cat);
         _enabled = _cat.CreateEntry("AutoSaveEnabled", true, "Host autosave enabled",
             "As host, periodically run the game's normal save so a crash doesn't lose progress since the last sleep.");

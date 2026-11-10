@@ -109,12 +109,12 @@ public static class HostPlayers
     }
 
     /// <summary>Disconnects the player, and bans them first if asked (null length = permanent). Returns a status line.</summary>
-    public static string Kick(Row r, bool ban, TimeSpan? length = null)
+    public static string Kick(Row r, bool ban, TimeSpan? length = null, string reason = "")
     {
         if (r.Fake) return $"{r.Name} is a test player (DebugFakePlayers). Nothing to {(ban ? "ban" : "kick")}";
         try
         {
-            if (ban) { BanList.Ban(r.SteamId, r.Name, length); return $"Banned {r.Name} ({BanLength.Label(length).ToLowerInvariant()})"; }
+            if (ban) { BanList.Ban(r.SteamId, r.Name, length, reason); return $"Banned {r.Name} ({BanLength.Label(length).ToLowerInvariant()})"; }
             var conn = FindConnection(r.ClientId);
             if (conn == null) return $"{r.Name} has already left";
             if (conn.IsLocalClient) return "";
@@ -126,7 +126,7 @@ public static class HostPlayers
     }
 
     /// <summary>Disconnects every connected player whose checked Steam ID is this one.</summary>
-    public static void DisconnectSteamId(ulong id, TimeSpan? length = null)
+    public static void DisconnectSteamId(ulong id, TimeSpan? length = null, string reason = "")
     {
         try
         {
@@ -138,7 +138,7 @@ public static class HostPlayers
                 var c = list[i]?.Connection;
                 if (c == null || c.IsLocalClient || !c.IsActive) continue;
                 if (BanList.VerifiedSteamId(c.ClientId) != id) continue;
-                KickNotice.Remove(c, id, KickNotice.Kind.Ban, length);
+                KickNotice.Remove(c, id, KickNotice.Kind.Ban, length, reason);
                 Utils.Log.Info($"Disconnected {list[i].PlayerName} ({id}): banned");
             }
         }

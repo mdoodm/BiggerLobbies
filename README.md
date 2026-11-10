@@ -30,11 +30,12 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 
 **Host settings** sits under Settings in the main menu and the pause menu, or press **F6** while you host. Changes apply straight away, without a restart.
 
-- **Players.** See everyone's ping. Kick lets them rejoin; Ban keeps them out for an hour, a day, a week or for good. Players who also have BiggerLobbies are told why they were removed, and removed players drop off your lobby screen.
-- **Take items.** Someone grabbed the product and left? Move their items and cash into your inventory, and they don't get them back if they rejoin. Every take is logged, with a copy of what they had.
+- **Players.** See everyone's ping. Kick lets them rejoin; Ban keeps them out for an hour, a day, a week or for good, with an optional reason. Players who also have BiggerLobbies are told why they were removed, and removed players drop off your lobby screen. For players with BiggerLobbies you also see their version and any mods they're missing.
+- **Take items.** Someone grabbed the product and left? Move their items and cash into your inventory, and they don't get them back if they rejoin. Every take is logged, with a copy of what they had. Changed your mind? **Give back** returns what you still carry to their empty slots.
 - **Access.** Build a whitelist from your Steam friends, save it as a crew, and load it next session in one click. Bans are saved between games and end on their own.
 - **Lobby.** Private, Friends only or Open, and the lobby size, even while friends are in.
 - **Saving.** How often the world and each player save, plus a Save now button.
+- **Discord.** Your profile shows "Hosting a lobby, Friends only (3 of 20)" under Playing Schedule I. Player count, lobby type and save name can each be turned off; the save name is off by default.
 
 ## Install
 
@@ -72,6 +73,17 @@ Everything is on by default, and most of it is easier to change in **Host settin
 | `SavedCrews` | empty | Named whitelists. Easiest to manage in Host settings |
 | `BannedPlayers` | empty | Banned Steam IDs, with an optional end time. Saved between games |
 | `HostPanelKey` | `F6` | Key that opens Host settings while you host |
+
+**Discord**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `DiscordPresence` | `true` | Show what you're doing under "Playing Schedule I" on Discord. Needs Discord running on your PC |
+| `DiscordShowPlayers` | `true` | Show the player count, like (3 of 20) |
+| `DiscordShowLobbyType` | `true` | Show Friends only, Open or Private |
+| `DiscordShowSaveName` | `false` | Show your organisation's name. Anyone who can see your profile can read it |
+| `DiscordAppId` | Schedule I's | The Discord application the presence is sent as. The default is Discord's own entry for the game, which has no logo. Register your own at discord.com/developers to show one |
+| `IgnoredModNames` | empty | Mod names, separated by commas, to leave out when comparing your mods with a player's. HUD mods and MLVScan are always left out |
 
 **Joining**
 

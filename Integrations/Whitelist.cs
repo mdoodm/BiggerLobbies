@@ -86,7 +86,7 @@ public static class Whitelist
             _lastRefusedLog[steamId] = now;
             Utils.Log.Info($"Refused {Friends.NameOf(steamId)} ({steamId}): not on the whitelist");
         }
-        KickNotice.Remove(conn, steamId, KickNotice.Kind.Whitelist);
+        KickNotice.Remove(conn, steamId, KickNotice.Kind.Whitelist, null, "", conn.Authenticated ? KickNotice.DisconnectDelay : KickNotice.QuickDelay);
         return true;
     }
 }

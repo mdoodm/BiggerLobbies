@@ -2,6 +2,22 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## Unreleased
+
+### Added
+- **Give back** on the Taken items list. It returns a take to the player who left: only what you still carry (the same item, quality and packaging), only into the slots it came from while they're still empty, and never more than you took. It never makes items. Cash comes back too, up to what you have on you. If you don't have all of it, it gives back what you can; items you had none of, and the rest of the cash, can be given back later with another press. When everything is back the button says Returned. Takes from before this version can't be given back.
+- **Ban reasons.** Type an optional reason on the Access tab before banning, from the Players tab or your friends list. It shows in the Banned list, and players with BiggerLobbies see it in their ban message. Old `BannedPlayers` entries still read.
+- **Version and mod check.** Players with BiggerLobbies tell you their version and mods when they join. The Players tab shows their version (red if it's older than yours) and any mods they're missing or have extra. Mods that only change one player's screen are skipped; add more to skip with `IgnoredModNames`. You get a warning in the log when someone is missing one of your mods.
+- Players who left, and bans without a name, show the name the player had in your game, even if they aren't your Steam friend. Names are remembered from this version on, in `UserData/BiggerLobbies/PlayerNames.tsv`.
+- **Discord rich presence.** Under "Playing Schedule I" on your Discord profile: "Hosting a lobby" with the lobby type and player count, like (3 of 20), and a session timer; "In a friend's lobby" with its count; or "Playing solo". The organisation name is off by default (`DiscordShowSaveName`). Turn parts of it off on the Lobby tab, or all of it with `DiscordPresence`. It uses Discord's own entry for Schedule I, so there's nothing to register; `DiscordAppId` takes your own application if you want a logo. Needs Discord running on the host's PC.
+
+### Fixed
+- A player you kicked, or the whitelist refused, stayed hidden from your lobby screen after you let them back in.
+- Take items could duplicate items if the player was rejoining at that moment. It now waits until they're fully gone.
+- The kick or ban message could replace a later, unrelated popup. It now replaces only the game's error popup, once.
+- Banned and unlisted players are refused faster when they first log in.
+- Switching to a tab in Host settings could show its sections overlapping until one of its lists changed.
+
 ## 1.0.9
 
 ### Added

@@ -4,14 +4,17 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using Il2CppFishNet;
 using Il2CppFishNet.Connection;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
 
 // Banned players: Steam IDs the host won't let in, for a set time or for good. Saved as
-//   BannedPlayers = "76561198000000001 (Alex), 76561198000000002 (Sam) until 2026-11-10T18:00:00Z"
-// The name is only a reminder; the number is what's checked. No "until" means permanent.
+//   BannedPlayers = "76561198000000001 (Alex), 76561198000000002 (Sam) [griefing] until 2026-11-10T18:00:00Z"
+// The name and the reason in square brackets are only reminders; the number is what's
+// checked. No "until" means permanent. Lines saved before reasons existed still read.
 // A banned player is disconnected as soon as their game sends its Steam login (StaleAuthFix),
 // and straight away if they're connected when the ban is made. Bans end on their own.
 public static class BanList
@@ -21,7 +24,8 @@ public static class BanList
         public readonly ulong SteamId;
         public readonly string Name;
         public readonly DateTime? Until;   // UTC; null = permanent
-        public Entry(ulong steamId, string name, DateTime? until = null) { SteamId = steamId; Name = name; Until = until; }
+        public readonly string Reason;     // may be empty
+        public Entry(ulong steamId, string name, DateTime? until = null, string reason = "") { SteamId = steamId; Name = name; Until = until; Reason = reason ?? ""; }
         public bool Permanent => Until == null;
     }
 
@@ -34,7 +38,7 @@ public static class BanList
     public static void Init(MelonPreferences_Category cat)
     {
         _entry = cat.CreateEntry("BannedPlayers", "", "Banned players",
-            "Steam IDs that can't join your games, separated by commas. A name in brackets is just a reminder; 'until' and a UTC time make the ban end then. Easiest to manage in Host settings.");
+            "Steam IDs that can't join your games, separated by commas. A name in round brackets and a reason in square brackets are just reminders; 'until' and a UTC time make the ban end then. Easiest to manage in Host settings.");
         Parse(_entry.Value);
 
         // 1.0.8 beta 1 and 2 saved bans as "Blacklist"; move them over once.
@@ -88,8 +92,18 @@ public static class BanList
                     until = DateTime.SpecifyKind(d, DateTimeKind.Utc);
                 else MelonLogger.Warning($"Banned players: couldn't read the end time '{datePart.Trim()}' for {id}; treating the ban as permanent");
             }
+            // "(name) [reason]". Names can't hold ')' and reasons can't hold '[' or ']'.
+            string reason = "";
+            rest = rest.Trim();
+            int close = rest.StartsWith("(") ? rest.IndexOf(')') : -1;
+            int rs = rest.IndexOf('[', close + 1);
+            if (rs >= 0 && rest.EndsWith("]"))
+            {
+                reason = rest.Substring(rs + 1, rest.Length - rs - 2).Trim();
+                rest = rest.Substring(0, rs);
+            }
             string name = rest.Trim().Trim('(', ')').Trim();
-            if (list.All(b => b.SteamId != id)) list.Add(new Entry(id, name, until));
+            if (list.All(b => b.SteamId != id)) list.Add(new Entry(id, name, until, reason));
         }
         return list;
     }
@@ -104,6 +118,8 @@ public static class BanList
             sb.Append(b.SteamId);
             string n = Clean(b.Name);
             if (n.Length > 0) sb.Append(" (").Append(n).Append(')');
+            string r = CleanReason(b.Reason);
+            if (r.Length > 0) sb.Append(" [").Append(r).Append(']');
             if (b.Until.HasValue) sb.Append(" until ").Append(b.Until.Value.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture));
         }
         _entry.Value = sb.ToString();
@@ -122,6 +138,14 @@ public static class BanList
 
     private static string Clean(string? n) =>
         new string((n ?? "").Where(c => c != ',' && c != '(' && c != ')' && !char.IsControl(c)).ToArray()).Replace(" until ", " ").Trim();
+
+    /// <summary>A reason that fits the saved list: no commas or square brackets, no "until ", at most 40 characters.</summary>
+    public static string CleanReason(string? r)
+    {
+        var s = new string((r ?? "").Where(c => c != ',' && c != '[' && c != ']' && !char.IsControl(c)).ToArray());
+        s = Regex.Replace(s, "until ", "till ", RegexOptions.IgnoreCase).Trim();
+        return s.Length > 40 ? s.Substring(0, 40).Trim() : s;
+    }
 
     public static bool IsBanned(ulong id)
     {
@@ -147,6 +171,25 @@ public static class BanList
     public static void RecordLogin(int clientId, ulong steamId) => _verified[clientId] = steamId;
     public static ulong VerifiedSteamId(int clientId) => _verified.TryGetValue(clientId, out var id) ? id : 0;
 
+    /// <summary>Called when a connection closes (StaleAuthFix), so the map doesn't grow all session.</summary>
+    public static void ForgetLogin(int clientId) => _verified.Remove(clientId);
+
+    /// <summary>True while any open connection logged in with this Steam ID, even before their player spawns.</summary>
+    public static bool IsConnected(ulong steamId)
+    {
+        if (steamId == 0) return false;
+        Il2CppSystem.Collections.Generic.Dictionary<int, NetworkConnection>? clients = null;
+        try { clients = InstanceFinder.ServerManager?.Clients; } catch { }
+        foreach (var kv in _verified)
+        {
+            if (kv.Value != steamId) continue;
+            if (clients == null) return true;   // can't check the connection: assume they're here
+            try { if (clients.TryGetValue(kv.Key, out var c) && c != null && c.IsActive) return true; }
+            catch { return true; }
+        }
+        return false;
+    }
+
     public static ulong HostSteamId()
     {
         try { return Il2CppSteamworks.SteamUser.GetSteamID().m_SteamID; } catch { return 0; }
@@ -155,17 +198,18 @@ public static class BanList
     private static readonly Dictionary<ulong, float> _lastRefusedLog = new();
 
     /// <summary>Bans for the given time (null = permanent). Re-banning replaces the old length.</summary>
-    public static void Ban(ulong id, string name, TimeSpan? length = null)
+    public static void Ban(ulong id, string name, TimeSpan? length = null, string reason = "")
     {
         if (id == 0) return;
         if (id == HostSteamId()) { MelonLogger.Warning("Refused to ban your own Steam ID"); return; }
         DateTime? until = length.HasValue ? DateTime.UtcNow + length.Value : null;
         _bans.RemoveAll(b => b.SteamId == id);
         Whitelist.Remove(id);
-        _bans.Add(new Entry(id, Clean(name), until));
+        reason = CleanReason(reason);
+        _bans.Add(new Entry(id, Clean(name), until, reason));
         Store();
-        Utils.Log.Info($"Banned {Clean(name)} ({id}) {(until.HasValue ? "until " + until.Value.ToString("u", CultureInfo.InvariantCulture) : "permanently")}");
-        HostPlayers.DisconnectSteamId(id, length);
+        Utils.Log.Info($"Banned {Clean(name)} ({id}) {(until.HasValue ? "until " + until.Value.ToString("u", CultureInfo.InvariantCulture) : "permanently")}{(reason.Length > 0 ? ": " + reason : "")}");
+        HostPlayers.DisconnectSteamId(id, length, reason);
     }
 
     public static void Unban(ulong id)
@@ -188,7 +232,8 @@ public static class BanList
             Utils.Log.Info($"Refused {(e.Name.Length > 0 ? e.Name + " " : "")}({steamId}): banned, {Remaining(e).ToLowerInvariant()}");
         }
         TimeSpan? left = e.Until.HasValue ? e.Until.Value - DateTime.UtcNow : null;
-        KickNotice.Remove(conn, steamId, KickNotice.Kind.Ban, left);
+        // Refused at their first login nothing else is in flight, so a short wait is enough for the notice.
+        KickNotice.Remove(conn, steamId, KickNotice.Kind.Ban, left, e.Reason, conn.Authenticated ? KickNotice.DisconnectDelay : KickNotice.QuickDelay);
         return true;
     }
 }

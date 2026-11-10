@@ -22,8 +22,11 @@ For modders, curious players, and anyone reviewing the code. BiggerLobbies is a 
 | Open lobbies | `Player.SetPlayerNameAndId_Server` kicks anyone who isn't the host's Steam friend as they load in | When the lobby is Open, `PlatformFriends.IsLocalPlayerFriendsWith` answers yes, so strangers can stay |
 | Lobby size while playing | The size is fixed when the lobby is created | Sets the Steam member limit, `max_players` and the live transport limit together, never below the players already in |
 | Bans and the whitelist | Anyone who can reach the lobby can log in | Checks each login in `FishNetSteamAuthenticator.OnSteamAuthBroadcast`, using the Steam ID Steam verifies, not the name or code a player's game reports, and refuses banned or unlisted players |
-| Kicking | The host can drop a connection, but Steam has no way to remove someone from a lobby, so their game says "Authentication Error" and keeps showing it | Posts a short notice in the lobby chat (`bl1\|kick\|<steam id>\|<kind>\|<seconds>`), waits 1.5 s, then disconnects. A player with the mod who sees a notice from the lobby owner naming them returns to the main menu with the reason. The host's lobby screen drops removed players until they leave or rejoin the Steam lobby; banned players stay hidden |
-| Take items | Players who leave keep their inventory in the save, at `Players/Player_<Steam ID>/Inventory.json`, and get it back when they rejoin | Waits 10 s after the file was last written, copies it to `UserData/BiggerLobbies/Taken`, moves the stacks that fit into the host's inventory with the game's own item loader, adds their cash, then blanks only the slots it took. Each take is appended to `TakenLog.tsv` |
+| Kicking | The host can drop a connection, but Steam has no way to remove someone from a lobby, so their game says "Authentication Error" and keeps showing it | Posts a short notice in the lobby chat (`bl1\|kick\|<steam id>\|<kind>\|<seconds>`, plus `\|<reason>` for a ban with a reason), waits 1.5 s (0.5 s for a player refused at their first login), then disconnects. A player with the mod who sees a notice from the lobby owner naming them returns to the main menu with the reason. The host's lobby screen drops removed players until they leave or rejoin the Steam lobby, or you let them in again; banned players stay hidden |
+| Take items | Players who leave keep their inventory in the save, at `Players/Player_<Steam ID>/Inventory.json`, and get it back when they rejoin | Waits 10 s after the file was last written, copies it to `UserData/BiggerLobbies/Taken`, moves the stacks that fit into the host's inventory with the game's own item loader, adds their cash, then blanks only the slots it took. Each take is appended to `TakenLog.tsv`, with a `.take.json` record of the exact slots and cash taken |
+| Give back | Nothing | Only while the player is away and their file has settled. For each taken slot that is still empty in their file, takes up to the amount taken out of the host's inventory, counting only stacks whose item data matches the stored slot (quality, packaging and so on; quantity and game version aside). Waits half a second, counts what really left the host's inventory, and writes only that back: the stored slot text with its quantity changed. Cash works the same way. The record keeps what was returned, so a second press never goes over the original |
+| Discord presence | Discord shows "Playing Schedule I" from its own list of known games, with nothing underneath | Talks to Discord over its local IPC pipe (`\\.\pipe\discord-ipc-N`, the discord-rpc protocol: a 4-byte opcode, a 4-byte length and JSON) from a background thread, sends the activity under Discord's own application entry for Schedule I at most every 15 s, and clears it on quit. No extra DLL |
+| Version and mods | Nothing | A player with the mod posts `bl1\|hello\|<steam id>\|<version>\|<mods>` in the lobby chat when they enter. The host keeps it for the session and compares the mod list with its own, skipping HUD mods, MLVScan and `IgnoredModNames` |
 | Host settings screen | No host controls | Clones the game's Settings screen into the main menu and the pause menu, strips its scripts, and builds the tabs and lists from the game's own buttons, sliders and text |
 
 The mod writes only warnings and errors to the log unless `DiagnosticLog` is on. With it on, every step of the lobby and join flow is logged with a `[diag]` prefix.
@@ -45,7 +48,9 @@ The mod writes only warnings and errors to the log unless `DiagnosticLog` is on.
 | `Integrations/Crews.cs` | Saved crews |
 | `Integrations/HostPlayers.cs` | The connected players list, ping, kick and ban |
 | `Integrations/KickNotice.cs` | Kick messages, both sides, and hiding removed players from the host's lobby screen |
-| `Integrations/DepartedPlayers.cs` | Players who left with items, Take items and the taken log |
+| `Integrations/DepartedPlayers.cs` | Players who left with items, Take items, Give back, the taken log and remembered player names |
+| `Integrations/DiscordPresence.cs` | Discord rich presence and its settings |
+| `Integrations/ModHandshake.cs` | The version and mod list players with the mod send, and the comparison shown on the Players tab |
 | `Integrations/Friends.cs`, `Integrations/Avatars.cs` | Steam friends, online status and avatars for the pickers |
 | `Integrations/HostSettingsMenu.cs` | The Host settings screen |
 | `Integrations/AutoSave.cs` | Autosave, player saves, save on leave, and the settings category |
@@ -54,6 +59,7 @@ The mod writes only warnings and errors to the log unless `DiagnosticLog` is on.
 | `Integrations/DiagnosticPatches.cs` | `[diag]` logging |
 | `Integrations/HarmonyPatches.cs` | The original patches, used by the Mono build only |
 | `Utils/Log.cs` | Quiet logging and the `DiagnosticLog` setting |
+| `Utils/MiniJson.cs` | A small JSON reader and writer for the Give back records |
 | `Utils/Constants.cs` | Default player limit and mod info |
 
 ## Build from source

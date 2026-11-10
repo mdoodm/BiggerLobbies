@@ -2,6 +2,8 @@
 using System;
 using HarmonyLib;
 using Il2CppFishNet.Connection;
+using Il2CppFishNet.Managing.Server;
+using Il2CppFishNet.Transporting;
 using Il2CppScheduleOne.Networking;
 using Il2CppScheduleOne.Platform;
 using Il2CppSteamworks;
@@ -30,7 +32,11 @@ public static class StaleAuthFix
             // On a connection's first login Steam checks the ticket against this ID and a
             // mismatch disconnects them, so for anyone who gets in it's their real Steam ID.
             // A reused connection number is a new, unauthenticated connection, so it's replaced.
-            if (!conn.Authenticated && auth.SteamId != 0) BanList.RecordLogin(conn.ClientId, auth.SteamId);
+            if (!conn.Authenticated && auth.SteamId != 0)
+            {
+                BanList.RecordLogin(conn.ClientId, auth.SteamId);
+                KickNotice.Unhide(auth.SteamId);   // let in again after a kick or a whitelist refusal: show them
+            }
 
             // A client that starts its join twice (e.g. Steam "Join Game" plus the lobby's
             // ready flag after a crash) sends a second auth on a connection that is already
@@ -67,6 +73,19 @@ public static class StaleAuthFix
         }
         catch (Exception e) { MelonLogger.Error($"Steam auth fix failed: {e}"); }
         return true;
+    }
+
+    // A closed connection's number can be reused by the next player, and the Steam ID map
+    // would otherwise grow all session. Forget the login when the connection stops.
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(ServerManager), nameof(ServerManager.Transport_OnRemoteConnectionState))]
+    private static void Transport_OnRemoteConnectionState_Postfix(RemoteConnectionStateArgs args)
+    {
+        try
+        {
+            if (args.ConnectionState == RemoteConnectionState.Stopped) BanList.ForgetLogin(args.ConnectionId);
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't clear a closed connection's login: {e.Message}"); }
     }
 }
 

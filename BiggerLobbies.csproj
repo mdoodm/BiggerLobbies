@@ -916,6 +916,9 @@
 	  <Compile Include="Utils\Constants.cs" />
 	  <Compile Include="Utils\Log.cs" />
 	  <Compile Include="Integrations\KickNotice.cs" />
+	  <Compile Include="Integrations\ModHandshake.cs" />
+	  <Compile Include="Integrations\DiscordPresence.cs" />
+	  <Compile Include="Utils\MiniJson.cs" />
 	</ItemGroup>
 
 	<PropertyGroup>

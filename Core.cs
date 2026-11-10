@@ -26,7 +26,9 @@ namespace BiggerLobbies
         {
             AutoSave.Update();
             DebugDummies.Update();
+            DepartedPlayers.Update();
             HostSettingsMenu.Update();
+            DiscordPresence.Update();
         }
 
         public override void OnSceneWasInitialized(int buildIndex, string sceneName)
@@ -38,6 +40,9 @@ namespace BiggerLobbies
 
         public override void OnApplicationQuit()
         {
+#if !MONO
+            DiscordPresence.Shutdown();
+#endif
             Instance = null;
         }
     }

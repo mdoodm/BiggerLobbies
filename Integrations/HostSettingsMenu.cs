@@ -70,9 +70,11 @@ public static class HostSettingsMenu
         public readonly List<GameObject> Pages = new();
         public int Tab;
         public RectTransform CrewList = null!;
-        public TMP_InputField? CrewName;
+        public TMP_InputField? CrewName, BanReason;
         public string LastCrewKey = "", ConfirmDeleteCrew = "";
         public Button WorldOff = null!, WorldOn = null!, PlayersOff = null!, PlayersOn = null!;
+        public readonly List<(Button off, Button on, Func<bool> get)> DiscordToggles = new();
+        public TextMeshProUGUI? DiscordHint;
         public Slider WorldEvery = null!, PlayersEvery = null!;
         public TextMeshProUGUI WorldValue = null!, PlayersValue = null!, LastSave = null!;
         public readonly Dictionary<int, TextMeshProUGUI> PingTexts = new();
@@ -571,8 +573,37 @@ public static class HostSettingsMenu
         ui.Tab = i;
         for (int j = 0; j < ui.Pages.Count; j++) ui.Pages[j].SetActive(ui.Tabs.Count < 4 || j == i);
         for (int j = 0; j < ui.Tabs.Count; j++) ui.Tabs[j].SetIsOnWithoutNotify(j == i);
+        RelayoutPage(ui, i);
+        MelonCoroutines.Start(RelayoutNextFrame(ui, i));
         var sr = ui.Layout.GetComponentInParent<ScrollRect>();
         if (sr != null) sr.verticalNormalizedPosition = 1f;
+    }
+
+    // A page that was inactive hasn't been laid out since its lists last changed, and nested
+    // layout groups only settle one level per pass, so rebuild it bottom-up when it's shown
+    // (and once more next frame, after the ContentSizeFitters have run).
+    private static void RelayoutPage(Ui ui, int i)
+    {
+        try
+        {
+            if (i < 0 || i >= ui.Pages.Count) return;
+            var page = ui.Pages[i].GetComponent<RectTransform>();
+            var groups = page.GetComponentsInChildren<LayoutGroup>(true);
+            for (int g = groups.Length - 1; g >= 0; g--)
+            {
+                var rt = groups[g].GetComponent<RectTransform>();
+                if (rt != null && rt != page) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(page);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(ui.Layout);
+        }
+        catch { }
+    }
+
+    private static IEnumerator RelayoutNextFrame(Ui ui, int i)
+    {
+        yield return null;
+        if (ui.Tab == i) RelayoutPage(ui, i);
     }
 
     private static void RefreshTabLabels(Ui ui)
@@ -770,6 +801,16 @@ public static class HostSettingsMenu
         }));
         ui.SizeHint = Hint(ui, L, "");
 
+        // Discord
+        Section(ui, L, "Discord", out _);
+        Hint(ui, L, "Shown under 'Playing Schedule I' on your Discord profile while the game runs", LabelX);
+        Spacer(ui, L, 4);
+        DiscordRow(ui, L, "Rich presence", () => DiscordPresence.Enabled, v => DiscordPresence.Enabled = v);
+        DiscordRow(ui, L, "Player count", () => DiscordPresence.ShowPlayers, v => DiscordPresence.ShowPlayers = v);
+        DiscordRow(ui, L, "Lobby type", () => DiscordPresence.ShowLobbyType, v => DiscordPresence.ShowLobbyType = v);
+        DiscordRow(ui, L, "Save name", () => DiscordPresence.ShowSaveName, v => DiscordPresence.ShowSaveName = v);
+        ui.DiscordHint = Hint(ui, L, "");
+
         // Whitelist
         L = ui.Pages[1].transform;
         ui.WhiteHeading = Section(ui, L, "Whitelist", out var wrow, first: true);
@@ -812,7 +853,7 @@ public static class HostSettingsMenu
         ui.Departed = Box(ui, L, card: true);
 
         ui.TakenHeading = Section(ui, L, "Taken items", out _);
-        Hint(ui, L, "What you took in this save. Originals are backed up in UserData/BiggerLobbies/Taken", LabelX);
+        Hint(ui, L, "What you took in this save. Give back returns what you still carry to their empty slots. Originals are backed up in UserData/BiggerLobbies/Taken", LabelX);
         Spacer(ui, L, 4);
         ui.TakenList = Box(ui, L, card: true);
 
@@ -831,7 +872,10 @@ public static class HostSettingsMenu
             ui.BanLenButtons.Add((b, len));
             bx += 108;
         }
-        Hint(ui, L, "Used for the next ban. Bans are saved between games and end on their own");
+        var reasonRow = Row(ui, L, RowH);
+        Text(ui, reasonRow, "Ban reason", LabelX, ControlX - LabelX - 8);
+        ui.BanReason = InputBox(ui, reasonRow, ControlX, ui.RowW - ControlX, "Reason (optional)", 40);
+        Hint(ui, L, "Used for the next ban, then the reason clears. Players with BiggerLobbies see it. Bans are saved between games and end on their own");
         Spacer(ui, L, 4);
         ui.Black = Box(ui, L, card: true);
 
@@ -856,6 +900,16 @@ public static class HostSettingsMenu
         RefreshStatic(ui);
     }
 
+    // An Off/On pair like the autosave rows, bound to one Discord setting.
+    private static void DiscordRow(Ui ui, Transform parent, string label, Func<bool> get, Action<bool> set)
+    {
+        var r = Row(ui, parent, RowH);
+        Text(ui, r, label, LabelX, ControlX - LabelX - 8);
+        var off = Btn(ui, r, "Off", ControlX, 120, () => { set(false); SetStatus(ui, $"Discord: {label.ToLowerInvariant()} off"); RefreshStatic(ui); });
+        var on = Btn(ui, r, "On", ControlX + 128, 120, () => { set(true); SetStatus(ui, $"Discord: {label.ToLowerInvariant()} on"); RefreshStatic(ui); });
+        ui.DiscordToggles.Add((off, on, get));
+    }
+
     private static void SetStatus(Ui ui, string s)
     {
         if (ui.Status != null) ui.Status.text = s ?? "";
@@ -877,6 +931,17 @@ public static class HostSettingsMenu
         Highlight(ui.WlOn, Whitelist.Enabled);
         Highlight(ui.WorldOff, !AutoSave.WorldEnabled);
         Highlight(ui.WorldOn, AutoSave.WorldEnabled);
+        foreach (var (off, on, get) in ui.DiscordToggles)
+        {
+            bool v = get();
+            Highlight(off, !v); Highlight(on, v);
+            bool usable = DiscordPresence.Enabled || ReferenceEquals(get, ui.DiscordToggles[0].get);
+            off.interactable = usable; on.interactable = usable;
+        }
+        if (ui.DiscordHint != null)
+            ui.DiscordHint.text = !DiscordPresence.Enabled ? "Nothing is sent to Discord"
+                : DiscordPresence.Status == "Connected" ? (DiscordPresence.ShowSaveName ? "Connected. Your organisation's name is visible to anyone who can see your profile" : "Connected")
+                : "Discord isn't running on this PC. It connects when it starts";
         Highlight(ui.PlayersOff, !AutoSave.PlayersEnabled);
         Highlight(ui.PlayersOn, AutoSave.PlayersEnabled);
         if (!_prefsDirty)
@@ -1044,7 +1109,7 @@ public static class HostSettingsMenu
         // Players
         var players = HostPlayers.List();
         ui.PlayersHeading.text = Heading("In the game", players.Count);
-        var pk = string.Join("|", players.ConvertAll(p => $"{p.ClientId}:{p.SteamId}:{p.Name}")) + "|" + ui.ConfirmBlacklist + InstanceFinder.IsServer;
+        var pk = string.Join("|", players.ConvertAll(p => $"{p.ClientId}:{p.SteamId}:{p.Name}:{HelloKey(p.SteamId)}")) + "|" + ui.ConfirmBlacklist + InstanceFinder.IsServer;
         if (force || pk != ui.LastPlayersKey)
         {
             ui.LastPlayersKey = pk;
@@ -1055,9 +1120,25 @@ public static class HostSettingsMenu
             foreach (var p in players)
             {
                 var row = p;
-                var r = Row(ui, ui.Players, RowH);
+                // Players with BiggerLobbies said hello: their version, and any mods that differ from yours.
+                ModHandshake.Hello? hello = null;
+                if (row.SteamId != 0 && ModHandshake.TryGet(row.SteamId, out var h)) hello = h;
+                string diff = hello == null ? "" : ModsLine(hello);
+                var r = Row(ui, ui.Players, diff.Length > 0 ? 48 : RowH);
                 Avatar(r, row.SteamId, Playing);
-                Text(ui, r, row.Name, NameX, ui.RowW - NameX - 324, plain: true);
+                var nm = Text(ui, r, row.Name, NameX, ui.RowW - NameX - 324 - (hello != null ? 72 : 0), plain: true);
+                if (diff.Length > 0)
+                {
+                    nm.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, 8);
+                    var dl = Text(ui, r, diff, NameX, ui.RowW - NameX - 324, Muted, 11, plain: true);
+                    dl.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, -10);
+                }
+                if (hello != null)
+                {
+                    bool older = ModHandshake.CompareToMine(hello.Version) < 0;
+                    var vt = Text(ui, r, "v" + hello.Version, ui.RowW - 308 - 72, 64, older ? Blocked : Muted, 12, plain: true);
+                    vt.alignment = TextAlignmentOptions.MidlineRight;
+                }
                 var ping = Text(ui, r, "", ui.RowW - 308, 72, Muted, 13);
                 ping.alignment = TextAlignmentOptions.MidlineRight;
                 ui.PingTexts[row.ClientId] = ping;
@@ -1065,8 +1146,8 @@ public static class HostSettingsMenu
                 bool confirming = ui.ConfirmBlacklist != 0 && ui.ConfirmBlacklist == row.SteamId;
                 var bb = RightBtn(ui, r, confirming ? "Confirm" : "Ban", 0, 120, () =>
                 {
-                    if (ui.ConfirmBlacklist == row.SteamId) { ui.ConfirmBlacklist = 0; SetStatus(ui, HostPlayers.Kick(row, true, _banLength)); }
-                    else { ui.ConfirmBlacklist = row.SteamId; SetStatus(ui, $"Click Confirm to ban {row.Name} ({BanLength.Label(_banLength).ToLowerInvariant()})"); }
+                    if (ui.ConfirmBlacklist == row.SteamId) { ui.ConfirmBlacklist = 0; SetStatus(ui, HostPlayers.Kick(row, true, _banLength, TakeReason(ui))); }
+                    else { ui.ConfirmBlacklist = row.SteamId; SetStatus(ui, $"Click Confirm to ban {row.Name} ({BanLength.Label(_banLength).ToLowerInvariant()}{ReasonNote(ui)})"); }
                     _nextRefresh = 0;
                 });
                 if (confirming) { var cc = bb.colors; cc.normalColor = Danger; cc.selectedColor = Danger; bb.colors = cc; }
@@ -1107,7 +1188,7 @@ public static class HostSettingsMenu
         // Taken items
         var log = DepartedPlayers.History();
         ui.TakenHeading.text = Heading("Taken items", log.Count);
-        var tk = string.Join("|", log.Select(t => $"{t.Utc.Ticks}:{TakenAgo(t.Utc)}"));
+        var tk = string.Join("|", log.Select(t => $"{t.Utc.Ticks}:{TakenAgo(t.Utc)}:{t.Record?.AllReturned}"));
         if (force || tk != ui.LastTakenKey)
         {
             ui.LastTakenKey = tk;
@@ -1115,12 +1196,23 @@ public static class HostSettingsMenu
             if (log.Count == 0) Empty(ui, ui.TakenList, "Nothing taken in this save");
             foreach (var t in log)
             {
+                var entry = t;
                 var r = Row(ui, ui.TakenList, RowH);
                 MiniAvatar(r, t.SteamId, LabelX);
-                Text(ui, r, t.Name.Length > 0 ? t.Name : t.SteamId.ToString(), LabelX + 28, 150, plain: true);
-                Text(ui, r, t.Summary, LabelX + 186, ui.RowW - LabelX - 186 - 112, Muted, 13, plain: true);
-                var when = Text(ui, r, TakenAgo(t.Utc), ui.RowW - 104, 96, Muted, 12);
+                string who = t.Name.Length > 0 && !t.Name.All(char.IsDigit) ? t.Name : DepartedPlayers.NameOf(t.SteamId);
+                Text(ui, r, who, LabelX + 28, 150, plain: true);
+                // Takes with a record get Give back; give backs and older takes are just listed.
+                float btn = t.Record != null ? 120 : 0;
+                Text(ui, r, t.Summary, LabelX + 186, ui.RowW - LabelX - 186 - 112 - btn, Muted, 13, plain: true);
+                var when = Text(ui, r, TakenAgo(t.Utc), ui.RowW - 104 - btn, 96, Muted, 12);
                 when.alignment = TextAlignmentOptions.MidlineRight;
+                if (t.Record == null) continue;
+                var gb = RightBtn(ui, r, "Give back", 0, 112, () =>
+                {
+                    SetStatus(ui, DepartedPlayers.GiveBack(entry, msg => { SetStatus(ui, msg); DepartedPlayers.Invalidate(); _nextRefresh = 0; }));
+                    _nextRefresh = 0;
+                });
+                if (t.Record.AllReturned) { SetLabel(gb, "Returned"); gb.interactable = false; }
             }
             Stripe(ui.TakenList); Relayout(ui, ui.TakenList);
         }
@@ -1161,11 +1253,13 @@ public static class HostSettingsMenu
             if (BanList.Bans.Count == 0) Empty(ui, ui.Black, "Nobody banned");
             foreach (var e in BanList.Bans)
             {
-                var id = e.SteamId; var name = e.Name.Length > 0 ? e.Name : e.SteamId.ToString();
+                var id = e.SteamId; var name = e.Name.Length > 0 ? e.Name : DepartedPlayers.NameOf(e.SteamId);
                 var r = Row(ui, ui.Black, RowH);
                 Avatar(r, id, Blocked);
-                Text(ui, r, name, NameX, 260, plain: true);
-                Text(ui, r, BanList.Remaining(e), NameX + 268, 200, e.Permanent ? Blocked : Muted, 13);
+                bool hasReason = e.Reason.Length > 0;
+                Text(ui, r, name, NameX, hasReason ? 170 : 312, plain: true);
+                if (hasReason) Text(ui, r, e.Reason, NameX + 176, 190, Muted, 12, plain: true);
+                Text(ui, r, BanList.Remaining(e), NameX + 372, 150, e.Permanent ? Blocked : Muted, 13);
                 RightBtn(ui, r, "Unban", 0, 100, () => { BanList.Unban(id); SetStatus(ui, $"Unbanned {name}"); _nextRefresh = 0; });
             }
             Stripe(ui.Black); Relayout(ui, ui.Black);
@@ -1179,7 +1273,32 @@ public static class HostSettingsMenu
 
     private static IEnumerable<string> BanKey(IReadOnlyList<BanList.Entry> list)
     {
-        foreach (var e in list) yield return e.SteamId + ":" + BanList.Remaining(e);
+        foreach (var e in list) yield return e.SteamId + ":" + BanList.Remaining(e) + ":" + e.Reason;
+    }
+
+    private static string HelloKey(ulong id) =>
+        id != 0 && ModHandshake.TryGet(id, out var h) ? $"{h.Version}/{string.Join(",", h.Missing)}/{string.Join(",", h.Extra)}" : "";
+
+    private static string ModsLine(ModHandshake.Hello h)
+    {
+        var parts = new List<string>();
+        if (h.Missing.Count > 0) parts.Add("missing: " + string.Join(", ", h.Missing));
+        if (h.Extra.Count > 0) parts.Add("extra: " + string.Join(", ", h.Extra));
+        return string.Join("; ", parts);
+    }
+
+    // The reason typed on the Access tab, for the ban being made now. The box clears for the next one.
+    private static string TakeReason(Ui ui)
+    {
+        string r = BanList.CleanReason(ui.BanReason?.text);
+        if (ui.BanReason != null) ui.BanReason.text = "";
+        return r;
+    }
+
+    private static string ReasonNote(Ui ui)
+    {
+        string r = BanList.CleanReason(ui.BanReason?.text);
+        return r.Length > 0 ? ": " + r : "";
     }
 
     private static IEnumerable<string> ListKey(IReadOnlyList<BanList.Entry> list)
@@ -1208,7 +1327,7 @@ public static class HostSettingsMenu
         var friends = Friends.List();
         int online = friends.FindAll(f => f.Online).Count;
         if (ui.PickerStatus != null)
-            ui.PickerStatus.text = ui.PickForWhitelist ? "Who can join this session" : $"Ban length: {BanLength.Label(_banLength).ToLowerInvariant()}";
+            ui.PickerStatus.text = ui.PickForWhitelist ? "Who can join this session" : $"Ban length: {BanLength.Label(_banLength).ToLowerInvariant()}{(ReasonNote(ui).Length > 0 ? ". Reason" + ReasonNote(ui) : "")}";
         ui.PickerRows.Clear();
         ui.FriendCount = friends.Count; ui.OnlineCount = online;
 
@@ -1236,7 +1355,7 @@ public static class HostSettingsMenu
             Button? b = null;
             b = RightBtn(ui, r, ui.PickForWhitelist ? "Add" : "Ban", 0, 100, () =>
             {
-                bool ok = ui.PickForWhitelist ? Whitelist.Add(fr.SteamId, fr.Name) : AddBlack(fr);
+                bool ok = ui.PickForWhitelist ? Whitelist.Add(fr.SteamId, fr.Name) : AddBlack(ui, fr);
                 if (ok) Done(b!, ui.PickForWhitelist ? "Added" : "Banned");
                 _nextRefresh = 0;
             });
@@ -1358,9 +1477,9 @@ public static class HostSettingsMenu
         return input;
     }
 
-    private static bool AddBlack(Friends.Friend f)
+    private static bool AddBlack(Ui ui, Friends.Friend f)
     {
-        BanList.Ban(f.SteamId, f.Name, _banLength);
+        BanList.Ban(f.SteamId, f.Name, _banLength, TakeReason(ui));
         return BanList.IsBanned(f.SteamId);
     }
 

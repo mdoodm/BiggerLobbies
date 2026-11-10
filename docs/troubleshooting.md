@@ -42,6 +42,10 @@ It's under **Settings** in the main menu, and in the pause menu while you host. 
 
 A player's own game saves their inventory as they leave, so Take items waits about 10 seconds after someone goes. If your inventory is full, it takes what fits and leaves the rest: make room and press it again. Each take is listed under **Taken items**, and the player's original inventory is copied to `UserData\BiggerLobbies\Taken`.
 
+### Give back gives back less than I took
+
+Give back never makes items. It only returns what you still carry, matching the item exactly (same quality and packaging), and only into the player's slots that are still empty. If you're short of an item, its slot gets what you have and isn't topped up later, because it's no longer empty. Items you had none of, and cash, can be given back with another press once you have them. Each give back is listed under **Taken items** too.
+
 ## Friends can't join
 
 ### A friend can't join after I've loaded in
