@@ -2,7 +2,7 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
-## Unreleased
+## 2.0.0
 
 ### Added
 - **Give back** on the Taken items list. It returns a take to the player who left: only what you still carry (the same item, quality and packaging), only into the slots it came from while they're still empty, and never more than you took. It never makes items. Cash comes back too, up to what you have on you. If you don't have all of it, it gives back what you can; items you had none of, and the rest of the cash, can be given back later with another press. When everything is back the button says Returned. Takes from before this version can't be given back.
