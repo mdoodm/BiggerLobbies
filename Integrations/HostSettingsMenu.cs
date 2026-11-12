@@ -1159,22 +1159,29 @@ public static class HostSettingsMenu
         // Left the game
         var gone = DepartedPlayers.List();
         ui.DepartedHeading.text = Heading("Left the game", gone.Count);
-        var dk = string.Join("|", gone.Select(g => $"{g.SteamId}:{g.Cash:0}:{string.Join(",", g.Items.Select(i => i.Id + i.Quantity))}:{Ago(g.SavedUtc)}")) + InstanceFinder.IsServer;
+        var dk = string.Join("|", gone.Select(g => $"{g.SteamId}:{g.Cash:0}:{string.Join(",", g.Items.Select(i => i.Id + i.Quantity))}:{Ago(g.SavedUtc)}:{(g.Compare == null ? "" : DepartedPlayers.CompareLine(g.Compare))}")) + InstanceFinder.IsServer;
         if (force || dk != ui.LastDepartedKey)
         {
             ui.LastDepartedKey = dk;
             Clear(ui.Departed);
             if (gone.Count == 0)
-                Empty(ui, ui.Departed, InstanceFinder.IsServer ? "Nobody has left with anything" : "Players who leave with items appear here while you host");
+                Empty(ui, ui.Departed, InstanceFinder.IsServer ? "Nobody has left with anything, and every save matches what they left with" : "Players who leave with items appear here while you host");
             foreach (var g in gone)
             {
                 var who = g;
-                var r = Row(ui, ui.Departed, 48);
+                // With a record of what they left with, a third line compares it with their save.
+                bool cmp = who.Compare != null;
+                var r = Row(ui, ui.Departed, cmp ? 70 : 48);
                 Avatar(r, who.SteamId, null);
                 var nm = Text(ui, r, who.Name, NameX, 150, plain: true);
-                nm.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, 8);
+                nm.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, cmp ? 16 : 8);
                 var meta = Text(ui, r, Ago(who.SavedUtc), NameX, 150, Muted, 11);
-                meta.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, -10);
+                meta.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, cmp ? -2 : -10);
+                if (cmp)
+                {
+                    var cl = Text(ui, r, DepartedPlayers.CompareLine(who.Compare!), NameX, ui.RowW - NameX - 12, who.Compare!.Matches ? Muted : Blocked, 11, plain: true);
+                    cl.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, -24);
+                }
                 float x = NameX + 158;
                 int shown = Math.Min(6, who.Items.Count);
                 for (int i = 0; i < shown; i++) { ItemChip(ui, r, who.Items[i], x); x += 34; }

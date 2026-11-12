@@ -27,6 +27,7 @@ namespace BiggerLobbies
             AutoSave.Update();
             DebugDummies.Update();
             DepartedPlayers.Update();
+            DepartedPlayers.UpdateLeftWith();
             HostSettingsMenu.Update();
             DiscordPresence.Update();
         }

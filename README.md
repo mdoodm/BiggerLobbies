@@ -100,6 +100,7 @@ Everything is on by default, and most of it is easier to change in **Host settin
 | `AutoSaveMinutes` | `5` | Real-time minutes between world saves |
 | `PlayerSaveEnabled` | `true` | Save each connected player between world saves |
 | `PlayerSaveSeconds` | `30` | Seconds between player saves |
+| `RestoreLeftWith` | `true` | When a player rejoins, put their saved items and clothes back to exactly what they left with, minus anything you took |
 | `PlantSyncEnabled` | `true` | Send pot water levels and growth to every player |
 | `PlantSyncMinutes` | `30` | In-game minutes between full resyncs of each pot |
 

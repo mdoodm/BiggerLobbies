@@ -30,7 +30,7 @@ If you use r2modman, check you launched with **Start modded** and not from Steam
 
 ### I updated, but nothing changed
 
-Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.1`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
+Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.2`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
 
 ## Host settings
 

@@ -45,6 +45,7 @@ public static class AutoSave
         ModHandshake.Init(_cat);
         DiscordPresence.Init(_cat);
         HostSettingsMenu.Init(_cat);
+        DepartedPlayers.InitLeftWith(_cat);
         _enabled = _cat.CreateEntry("AutoSaveEnabled", true, "Host autosave enabled",
             "As host, periodically run the game's normal save so a crash doesn't lose progress since the last sleep.");
         _minutes = _cat.CreateEntry("AutoSaveMinutes", 5, "Autosave interval (minutes)");
@@ -108,7 +109,7 @@ public static class AutoSave
     // Before a player's file is rewritten, keep the last copy of their clothing, appearance and
     // inventory (the last 10 that differ) in UserData/BiggerLobbies/PlayerBackups/<save>/<id>,
     // so a bad save can be undone by copying the files back into Players/Player_<id>.
-    private static void BackUp(string code)
+    internal static void BackUp(string code, bool force = false)
     {
         try
         {
@@ -126,7 +127,7 @@ public static class AutoSave
             }
             if (text.Length == 0) return;
             string hash = ((uint)text.GetHashCode()).ToString("x8");
-            if (_lastBackup.TryGetValue(code, out var last) && last == hash) return;
+            if (!force && _lastBackup.TryGetValue(code, out var last) && last == hash) return;
             _lastBackup[code] = hash;
             var dest = System.IO.Path.Combine(root, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
             System.IO.Directory.CreateDirectory(dest);

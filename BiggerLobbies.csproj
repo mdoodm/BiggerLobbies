@@ -909,6 +909,7 @@
 	  <Compile Include="Integrations\Whitelist.cs" />
 	  <Compile Include="Integrations\Crews.cs" />
 	  <Compile Include="Integrations\DepartedPlayers.cs" />
+	  <Compile Include="Integrations\DepartedPlayers.LeftWith.cs" />
 	  <Compile Include="Integrations\Friends.cs" />
 	  <Compile Include="Integrations\Avatars.cs" />
 	  <Compile Include="Integrations\HostPlayers.cs" />

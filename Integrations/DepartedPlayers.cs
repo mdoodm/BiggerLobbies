@@ -29,7 +29,7 @@ namespace BiggerLobbies.Integrations;
 // slot text that was taken. "Give back" uses it to return a take: only what the host still
 // carries (same item, same quality and packaging), only into slots that are still empty in
 // the player's file, and never more than was taken. It never makes items.
-public static class DepartedPlayers
+public static partial class DepartedPlayers
 {
     public sealed class Slot
     {
@@ -48,6 +48,7 @@ public static class DepartedPlayers
         public DateTime SavedUtc;
         public List<Slot> Items = new();
         public float Cash;
+        public LeftCheck? Compare;   // against what they left with, when that was kept
     }
 
     private static List<Info> _cache = new();
@@ -337,7 +338,8 @@ public static class DepartedPlayers
                 var text = File.ReadAllText(file);
                 var slots = ReadItems(text, out var lits, out _);
                 float cash = CashOf(lits, out _);
-                if (slots.Count == 0 && cash < 0.01f) continue;
+                var cmp = Compare(id);
+                if (slots.Count == 0 && cash < 0.01f && (cmp == null || cmp.Matches)) continue;
                 result.Add(new Info
                 {
                     SteamId = id,
@@ -346,6 +348,7 @@ public static class DepartedPlayers
                     SavedUtc = File.GetLastWriteTimeUtc(file),
                     Items = slots,
                     Cash = cash,
+                    Compare = cmp,
                 });
             }
         }

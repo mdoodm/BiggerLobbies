@@ -2,6 +2,12 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## 2.0.2
+
+### Added
+- **Left with vs. saved.** When a player leaves, the host keeps one copy of their last save (their exit save, or the last player save before a crash) as what they left with, in `UserData/BiggerLobbies/LeftWith/<save>/`. Nothing extra is saved while they play. Under **Left the game** on the Players tab, each of them gets a line comparing what they left with against their save file now, and anything you took is noted there. A difference shows in red, with what's missing or extra.
+- When a player rejoins and their save doesn't match what they left with (minus what you took, plus what you gave back), the save is put back just before the game loads it, so they spawn with exactly what they left with. The replaced files are copied to `PlayerBackups` first. If a take doesn't line up with what they left with, nothing is changed and the log says why. Turn this off with `RestoreLeftWith`.
+
 ## 2.0.1
 
 ### Fixed
