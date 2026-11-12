@@ -30,7 +30,7 @@ If you use r2modman, check you launched with **Start modded** and not from Steam
 
 ### I updated, but nothing changed
 
-Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.0`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
+Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.1`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
 
 ## Host settings
 
@@ -93,6 +93,10 @@ Bans use the Steam ID Steam checks at login, so a renamed account is still banne
 Make sure `AutoSaveEnabled` and `PlayerSaveEnabled` are on, or check the **Saving** tab in Host settings. Your log shows `Autosaving …` for each world save, and `A player left; saving now` when someone drops. A crashed player can still lose up to `PlayerSaveSeconds` of progress.
 
 Player saves run more often than world saves, so a player's file can be a few minutes ahead of the world. If the host crashes in that window, items a player just moved between their inventory and storage can be lost or duplicated. The base game behaves the same way when a player quits normally.
+
+### A player lost their clothes after a crash
+
+Update to 2.0.1 or later on the host. To get the outfit back, close the game and open `UserData/BiggerLobbies/PlayerBackups/<save>/<Steam ID>/`, which holds the last 10 versions of that player's files. Pick the newest folder from before the loss, and copy its `Clothing.json` into `Players/Player_<Steam ID>` in the save. Copy `Inventory.json` too only if their items were lost as well, because it also brings back items they've used or sold since.
 
 ### Leaves, petrol or deliveries disappear from cauldrons or employees
 

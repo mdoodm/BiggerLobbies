@@ -1,5 +1,6 @@
 ﻿#if !MONO
 using System;
+using HarmonyLib;
 using Il2CppFishNet;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.GameTime;
@@ -60,6 +61,88 @@ public static class AutoSave
     public static int WorldMinutes { get => Math.Max(1, _minutes?.Value ?? 5); set { if (_minutes != null) _minutes.Value = Math.Clamp(value, 1, 60); } }
     public static bool PlayersEnabled { get => _playerSaveEnabled?.Value ?? false; set { if (_playerSaveEnabled != null) _playerSaveEnabled.Value = value; } }
     public static int PlayerSeconds { get => Math.Max(10, _playerSaveSeconds?.Value ?? 30); set { if (_playerSaveSeconds != null) _playerSaveSeconds.Value = Math.Clamp(value, 10, 300); } }
+
+    // A player who has connected but not finished loading (a rejoin after a crash) has blank
+    // clothing and inventory on the host until their saved data is applied. Saving them then
+    // overwrites their file with those blanks, so every save of them is skipped until loaded.
+    [HarmonyPatch(typeof(PlayerManager), nameof(PlayerManager.SavePlayer))]
+    private static class SavePlayerGuard
+    {
+        private static bool Prefix(Player player)
+        {
+            try
+            {
+                if (player == null || player.IsLocalPlayer) return true;
+                if (player.PlayerLoaded) { BackUp(player.PlayerCode); return true; }
+                Utils.Log.Info($"Skipped saving {player.PlayerCode}: their data hasn't finished loading");
+                return false;
+            }
+            catch (Exception e) { MelonLogger.Warning($"Save guard failed: {e.Message}"); return true; }
+        }
+    }
+
+    // The game's full save writes each player through Player.WriteData, which reads
+    // GetClothingString directly (it doesn't go through SavePlayer). For a remote player who
+    // hasn't finished loading, hand it the clothing already on disk instead of the blanks.
+    [HarmonyPatch(typeof(Player), nameof(Player.GetClothingString))]
+    private static class ClothingStringGuard
+    {
+        private static void Postfix(Player __instance, ref string __result)
+        {
+            try
+            {
+                if (__instance == null || __instance.IsLocalPlayer || !InstanceFinder.IsServer) return;
+                string code = __instance.PlayerCode;
+                if (__instance.PlayerLoaded) { BackUp(code); return; }
+                var folder = DepartedPlayers.PlayersFolder();
+                if (folder == null || string.IsNullOrEmpty(code) || code.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0) return;
+                var file = System.IO.Path.Combine(folder, "Player_" + code, "Clothing.json");
+                if (!System.IO.File.Exists(file)) return;
+                __result = System.IO.File.ReadAllText(file);
+                Utils.Log.Info($"Kept {code}'s saved clothing: their data hasn't finished loading");
+            }
+            catch (Exception e) { MelonLogger.Warning($"Clothing save guard failed: {e.Message}"); }
+        }
+    }
+
+    // Before a player's file is rewritten, keep the last copy of their clothing, appearance and
+    // inventory (the last 10 that differ) in UserData/BiggerLobbies/PlayerBackups/<save>/<id>,
+    // so a bad save can be undone by copying the files back into Players/Player_<id>.
+    private static void BackUp(string code)
+    {
+        try
+        {
+            var folder = DepartedPlayers.PlayersFolder();
+            if (folder == null || string.IsNullOrEmpty(code) || code.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0) return;
+            var src = System.IO.Path.Combine(folder, "Player_" + code);
+            if (!System.IO.Directory.Exists(src)) return;
+            string save = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(folder) ?? "");
+            var root = System.IO.Path.Combine(MelonLoader.Utils.MelonEnvironment.UserDataDirectory, "BiggerLobbies", "PlayerBackups", save, code);
+            string text = "";
+            foreach (var f in new[] { "Clothing.json", "Appearance.json", "Inventory.json" })
+            {
+                var fp = System.IO.Path.Combine(src, f);
+                text += System.IO.File.Exists(fp) ? System.IO.File.ReadAllText(fp) : "";
+            }
+            if (text.Length == 0) return;
+            string hash = ((uint)text.GetHashCode()).ToString("x8");
+            if (_lastBackup.TryGetValue(code, out var last) && last == hash) return;
+            _lastBackup[code] = hash;
+            var dest = System.IO.Path.Combine(root, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            System.IO.Directory.CreateDirectory(dest);
+            foreach (var f in new[] { "Clothing.json", "Appearance.json", "Inventory.json" })
+            {
+                var fp = System.IO.Path.Combine(src, f);
+                if (System.IO.File.Exists(fp)) System.IO.File.Copy(fp, System.IO.Path.Combine(dest, f), true);
+            }
+            var old = System.IO.Directory.GetDirectories(root);
+            Array.Sort(old, StringComparer.Ordinal);
+            for (int i = 0; i < old.Length - 10; i++) System.IO.Directory.Delete(old[i], true);
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't back up {code}'s player files: {e.Message}"); }
+    }
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> _lastBackup = new();
 
     private static bool Hosting() =>
         SceneManager.GetActiveScene().name == "Main" && InstanceFinder.IsServer;
@@ -184,6 +267,7 @@ public static class AutoSave
         {
             var p = players[i];
             if (p == null || p.IsLocalPlayer || string.IsNullOrEmpty(p.PlayerCode)) continue; // host is covered by the full save
+            if (!p.PlayerLoaded) continue; // still loading their saved data: saving now would overwrite it with blanks
             try
             {
                 manager.SavePlayer(p);

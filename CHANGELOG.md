@@ -2,6 +2,14 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## 2.0.1
+
+### Fixed
+- A player who crashed and rejoined could lose all the clothes they were wearing. If a save ran while they were still loading back in (for example the save when their old connection dropped), the game wrote their blank outfit over their saved one. The host now keeps their saved clothing until they've finished loading, and the mod's own player saves skip them until then.
+
+### Added
+- **Player backups.** Before a player's files are saved, the host keeps a copy of their clothing, appearance and inventory in `UserData/BiggerLobbies/PlayerBackups/<save>/<Steam ID>/`, the last 10 that differ. To undo a bad save, copy the files back into that player's `Players/Player_<Steam ID>` folder in the save while the game is closed.
+
 ## 2.0.0
 
 ### Added

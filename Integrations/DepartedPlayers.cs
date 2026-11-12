@@ -287,7 +287,7 @@ public static class DepartedPlayers
         }
     }
 
-    private static string? PlayersFolder()
+    internal static string? PlayersFolder()
     {
         try
         {
