@@ -25,7 +25,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | Host controls | None | Host settings: lobby type, live lobby size, kick, timed bans, whitelist and saved crews, take items back from players who left |
 | Strangers in an Open lobby | Kicked as they load in | Can play |
 | Settings | None | 15, plus 2 testing tools, most of them also in Host settings |
-| Builds | Mono and Il2Cpp | Il2Cpp (Mono left as it was) |
+| Builds | Mono and Il2Cpp | Il2Cpp only |
 
 ## Issues fixed
 

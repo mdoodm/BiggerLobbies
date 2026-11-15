@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -47,6 +46,11 @@ public static class HostSettingsMenu
         public RectTransform? Panel;
         public float PanelH0, PanelY0, ButtonStep;
         public bool ButtonShown = true;
+        public bool ScreenAwake, PickerAwake;   // MenuScreen.Awake has run (see ActivateOnce)
+        public int PlayerCount;
+        public string LastStaticKey = "";
+        public readonly List<(TextMeshProUGUI t, DateTime utc)> DepartedWhen = new(), TakenWhen = new();
+        public readonly Dictionary<ulong, TextMeshProUGUI> BanLeft = new();
 
         public readonly List<(Button b, LobbyPrivacy.Mode m)> PrivacyButtons = new();
         public Button WlOff = null!, WlOn = null!;
@@ -170,8 +174,8 @@ public static class HostSettingsMenu
         SetupTabs(ui);
         Header(ui, ui.Screen, () => ui.Screen.Close(), true);
         Header(ui, ui.Picker, () => ui.Picker.Close(), false);
-        ActivateOnce(ui.Screen);
-        ActivateOnce(ui.Picker);
+        ActivateOnce(ui, false);
+        ActivateOnce(ui, true);
         AddMenuButton(ui, panel);
         return ui;
     }
@@ -179,16 +183,15 @@ public static class HostSettingsMenu
     // A MenuScreen hides itself in Awake, and Awake only runs once its parents are active.
     // The pause menu is inactive until the game is paused, so a screen opened there for the
     // first time would hide itself straight away. Run Awake first, whenever we can.
-    private static readonly HashSet<IntPtr> _awake = new();
-
-    private static void ActivateOnce(MenuScreen s)
+    private static void ActivateOnce(Ui ui, bool picker)
     {
-        if (_awake.Contains(s.Pointer)) return;
+        if (picker ? ui.PickerAwake : ui.ScreenAwake) return;
+        var s = picker ? ui.Picker : ui.Screen;
         var parent = s.transform.parent;
         if (parent != null && !parent.gameObject.activeInHierarchy) return;
         s.gameObject.SetActive(true);
         if (!s.IsOpen) s.gameObject.SetActive(false);
-        _awake.Add(s.Pointer);
+        if (picker) ui.PickerAwake = true; else ui.ScreenAwake = true;
     }
 
     // --- Cloning the game's Settings screen ------------------------------------------------
@@ -461,17 +464,25 @@ public static class HostSettingsMenu
     private static TimeSpan? _banLength;                                      // null = permanent
     private static bool _prefsDirty;                                          // autosave sliders: write the file once dragging stops
     private static Sprite? _circle, _fade;
-    private static bool _spritesSearched;
+    private static float _nextSpriteSearch;
 
+    private static bool Gone(Sprite? s) => s == null || s.WasCollected;
+
+    // Sprites are found by name among everything loaded. Look again when one is missing or was
+    // unloaded with a scene, but not more than every few seconds: the search walks all sprites.
     private static void FindSprites()
     {
-        if (_spritesSearched && (_circle == null || !_circle.WasCollected)) return;
-        _spritesSearched = true;
+        if (!Gone(_circle) && !Gone(_fade)) return;
+        if (Time.realtimeSinceStartup < _nextSpriteSearch) return;
+        _nextSpriteSearch = Time.realtimeSinceStartup + 5f;
+        if (Gone(_circle)) _circle = null;
+        if (Gone(_fade)) _fade = null;
         foreach (var s in Resources.FindObjectsOfTypeAll<Sprite>())
         {
             if (s == null) continue;
             if (_circle == null && s.name == "Circle") _circle = s;
             if (_fade == null && s.name == "Vertical gradient") _fade = s;
+            if (_circle != null && _fade != null) break;
         }
     }
 
@@ -609,7 +620,7 @@ public static class HostSettingsMenu
     private static void RefreshTabLabels(Ui ui)
     {
         if (ui.TabLabels.Count < 4) return;
-        int players = HostPlayers.List().Count;
+        int players = ui.PlayerCount;
         if (ui.TabLabels[0] != null) ui.TabLabels[0].text = players > 0 ? $"Players {players}" : "Players";
     }
 
@@ -635,7 +646,8 @@ public static class HostSettingsMenu
         var img = go.AddComponent<RawImage>();
         img.raycastTarget = false;
         Avatars.Show(img, steamId);
-        if (dot == null || _circle == null) return;
+        FindSprites();
+        if (dot == null || Gone(_circle)) return;
 
         // Ring in the panel colour, then the dot, so it reads on any avatar.
         foreach (var (size, col) in new[] { (16f, new Color(0.10f, 0.10f, 0.10f, 1f)), (11f, dot.Value) })
@@ -711,7 +723,7 @@ public static class HostSettingsMenu
     // A soft fade at the bottom of the scroll area, so it's clear the page goes on.
     private static void BottomFade(Transform layout)
     {
-        if (_fade == null) return;
+        if (Gone(_fade)) return;
         var scroll = layout.parent?.parent;   // Viewport -> Scroll View
         if (scroll == null) return;
         var go = new GameObject("Fade");
@@ -819,7 +831,7 @@ public static class HostSettingsMenu
         var w = Row(ui, L, RowH);
         Text(ui, w, "Only listed players", LabelX, ControlX - LabelX - 8);
         ui.WlOff = Btn(ui, w, "Off", ControlX, 120, () => { Whitelist.SetEnabled(false); SetStatus(ui, "Whitelist off"); RefreshStatic(ui); _nextRefresh = 0; });
-        ui.WlOn = Btn(ui, w, "On", ControlX + 128, 120, () => { Whitelist.SetEnabled(true); SetStatus(ui, "Whitelist on. Players already here stay"); RefreshStatic(ui); _nextRefresh = 0; });
+        ui.WlOn = Btn(ui, w, "On", ControlX + 128, 120, () => { Whitelist.SetEnabled(true); SetStatus(ui, Whitelist.Players.Count == 0 ? "Whitelist on. Add players, or nobody else can join" : "Whitelist on. Players not on the list were removed"); RefreshStatic(ui); _nextRefresh = 0; });
         Hint(ui, L, "Starts empty each game. Bans always win");
         Spacer(ui, L, 4);
         ui.White = Box(ui, L, card: true);
@@ -917,33 +929,45 @@ public static class HostSettingsMenu
 
     private static void RefreshStatic(Ui ui)
     {
-        foreach (var (b, m) in ui.PrivacyButtons) Highlight(b, LobbyPrivacy.Current == m);
-        foreach (var (b, len) in ui.BanLenButtons)
+        // Button colours and hints only change when a setting does, so read each setting once and
+        // touch the widgets only when that snapshot differs from the last one.
+        var privacy = LobbyPrivacy.Current;
+        bool wl = Whitelist.Enabled, worldOn = AutoSave.WorldEnabled, playersOn = AutoSave.PlayersEnabled;
+        bool dEnabled = DiscordPresence.Enabled, dConnected = DiscordPresence.Status == "Connected", dSave = DiscordPresence.ShowSaveName;
+        var dVals = new bool[ui.DiscordToggles.Count];
+        for (int i = 0; i < dVals.Length; i++) dVals[i] = ui.DiscordToggles[i].get();
+        string key = $"{privacy}|{_banLength?.Ticks}|{wl}|{worldOn}|{playersOn}|{dEnabled}|{dConnected}|{dSave}|{string.Join(",", dVals)}";
+        if (key != ui.LastStaticKey)
         {
-            bool on = len == _banLength;
-            var c = b.colors;
-            c.normalColor = on ? (len == null ? Danger : Accent) : Grey;   // Permanent selected shows red
-            c.selectedColor = c.normalColor;
-            b.colors = c;
+            ui.LastStaticKey = key;
+            foreach (var (b, m) in ui.PrivacyButtons) Highlight(b, privacy == m);
+            foreach (var (b, len) in ui.BanLenButtons)
+            {
+                bool on = len == _banLength;
+                var c = b.colors;
+                c.normalColor = on ? (len == null ? Danger : Accent) : Grey;   // Permanent selected shows red
+                c.selectedColor = c.normalColor;
+                b.colors = c;
+            }
+            if (ui.PrivacyHint != null) ui.PrivacyHint.text = PrivacyHint(privacy);
+            Highlight(ui.WlOff, !wl);
+            Highlight(ui.WlOn, wl);
+            Highlight(ui.WorldOff, !worldOn);
+            Highlight(ui.WorldOn, worldOn);
+            for (int i = 0; i < dVals.Length; i++)
+            {
+                var (off, on, _) = ui.DiscordToggles[i];
+                Highlight(off, !dVals[i]); Highlight(on, dVals[i]);
+                bool usable = dEnabled || i == 0;
+                off.interactable = usable; on.interactable = usable;
+            }
+            if (ui.DiscordHint != null)
+                ui.DiscordHint.text = !dEnabled ? "Nothing is sent to Discord"
+                    : dConnected ? (dSave ? "Connected. Your organisation's name is visible to anyone who can see your profile" : "Connected")
+                    : "Discord isn't running on this PC. It connects when it starts";
+            Highlight(ui.PlayersOff, !playersOn);
+            Highlight(ui.PlayersOn, playersOn);
         }
-        if (ui.PrivacyHint != null) ui.PrivacyHint.text = PrivacyHint(LobbyPrivacy.Current);
-        Highlight(ui.WlOff, !Whitelist.Enabled);
-        Highlight(ui.WlOn, Whitelist.Enabled);
-        Highlight(ui.WorldOff, !AutoSave.WorldEnabled);
-        Highlight(ui.WorldOn, AutoSave.WorldEnabled);
-        foreach (var (off, on, get) in ui.DiscordToggles)
-        {
-            bool v = get();
-            Highlight(off, !v); Highlight(on, v);
-            bool usable = DiscordPresence.Enabled || ReferenceEquals(get, ui.DiscordToggles[0].get);
-            off.interactable = usable; on.interactable = usable;
-        }
-        if (ui.DiscordHint != null)
-            ui.DiscordHint.text = !DiscordPresence.Enabled ? "Nothing is sent to Discord"
-                : DiscordPresence.Status == "Connected" ? (DiscordPresence.ShowSaveName ? "Connected. Your organisation's name is visible to anyone who can see your profile" : "Connected")
-                : "Discord isn't running on this PC. It connects when it starts";
-        Highlight(ui.PlayersOff, !AutoSave.PlayersEnabled);
-        Highlight(ui.PlayersOn, AutoSave.PlayersEnabled);
         if (!_prefsDirty)
         {
             ui.WorldEvery.SetValueWithoutNotify(AutoSave.WorldMinutes);
@@ -1075,14 +1099,15 @@ public static class HostSettingsMenu
     private static void RefreshLists(Ui ui, bool force)
     {
         // Saved crews
-        ui.CrewsHeading.text = Heading("Saved crews", Crews.All.Count);
-        var ck = string.Join("|", Crews.All.Select(c => c.Name + ":" + c.Members.Count)) + "|" + ui.ConfirmDeleteCrew;
+        var crews = Crews.All;
+        ui.CrewsHeading.text = Heading("Saved crews", crews.Count);
+        var ck = string.Join("|", crews.Select(c => c.Name + ":" + c.Members.Count)) + "|" + ui.ConfirmDeleteCrew;
         if (force || ck != ui.LastCrewKey)
         {
             ui.LastCrewKey = ck;
             Clear(ui.CrewList);
-            if (Crews.All.Count == 0) Empty(ui, ui.CrewList, "No crews yet. Fill the whitelist, then save it here");
-            foreach (var c in Crews.All)
+            if (crews.Count == 0) Empty(ui, ui.CrewList, "No crews yet. Fill the whitelist, then save it here");
+            foreach (var c in crews)
             {
                 var crew = c;
                 var r = Row(ui, ui.CrewList, RowH);
@@ -1108,6 +1133,7 @@ public static class HostSettingsMenu
 
         // Players
         var players = HostPlayers.List();
+        ui.PlayerCount = players.Count;
         ui.PlayersHeading.text = Heading("In the game", players.Count);
         var pk = string.Join("|", players.ConvertAll(p => $"{p.ClientId}:{p.SteamId}:{p.Name}:{HelloKey(p.SteamId)}")) + "|" + ui.ConfirmBlacklist + InstanceFinder.IsServer;
         if (force || pk != ui.LastPlayersKey)
@@ -1146,7 +1172,7 @@ public static class HostSettingsMenu
                 bool confirming = ui.ConfirmBlacklist != 0 && ui.ConfirmBlacklist == row.SteamId;
                 var bb = RightBtn(ui, r, confirming ? "Confirm" : "Ban", 0, 120, () =>
                 {
-                    if (ui.ConfirmBlacklist == row.SteamId) { ui.ConfirmBlacklist = 0; SetStatus(ui, HostPlayers.Kick(row, true, _banLength, TakeReason(ui))); }
+                    if (ui.ConfirmBlacklist == row.SteamId) { ui.ConfirmBlacklist = 0; SetStatus(ui, HostPlayers.Kick(row, true, _banLength, PeekReason(ui))); if (BanList.IsBanned(row.SteamId)) ClearReason(ui); }
                     else { ui.ConfirmBlacklist = row.SteamId; SetStatus(ui, $"Click Confirm to ban {row.Name} ({BanLength.Label(_banLength).ToLowerInvariant()}{ReasonNote(ui)})"); }
                     _nextRefresh = 0;
                 });
@@ -1159,11 +1185,12 @@ public static class HostSettingsMenu
         // Left the game
         var gone = DepartedPlayers.List();
         ui.DepartedHeading.text = Heading("Left the game", gone.Count);
-        var dk = string.Join("|", gone.Select(g => $"{g.SteamId}:{g.Cash:0}:{string.Join(",", g.Items.Select(i => i.Id + i.Quantity))}:{Ago(g.SavedUtc)}:{(g.Compare == null ? "" : DepartedPlayers.CompareLine(g.Compare))}")) + InstanceFinder.IsServer;
+        var dk = string.Join("|", gone.Select(g => $"{g.SteamId}:{g.Cash:0}:{string.Join(",", g.Items.Select(i => i.Id + i.Quantity))}:{(g.Compare == null ? "" : DepartedPlayers.CompareLine(g.Compare))}")) + InstanceFinder.IsServer;
         if (force || dk != ui.LastDepartedKey)
         {
             ui.LastDepartedKey = dk;
             Clear(ui.Departed);
+            ui.DepartedWhen.Clear();
             if (gone.Count == 0)
                 Empty(ui, ui.Departed, InstanceFinder.IsServer ? "Nobody has left with anything, and every save matches what they left with" : "Players who leave with items appear here while you host");
             foreach (var g in gone)
@@ -1176,6 +1203,7 @@ public static class HostSettingsMenu
                 var nm = Text(ui, r, who.Name, NameX, 150, plain: true);
                 nm.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, cmp ? 16 : 8);
                 var meta = Text(ui, r, Ago(who.SavedUtc), NameX, 150, Muted, 11);
+                ui.DepartedWhen.Add((meta, who.SavedUtc));
                 meta.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, cmp ? -2 : -10);
                 if (cmp)
                 {
@@ -1195,11 +1223,12 @@ public static class HostSettingsMenu
         // Taken items
         var log = DepartedPlayers.History();
         ui.TakenHeading.text = Heading("Taken items", log.Count);
-        var tk = string.Join("|", log.Select(t => $"{t.Utc.Ticks}:{TakenAgo(t.Utc)}:{t.Record?.AllReturned}"));
+        var tk = string.Join("|", log.Select(t => $"{t.Utc.Ticks}:{t.Record?.AllReturned}"));
         if (force || tk != ui.LastTakenKey)
         {
             ui.LastTakenKey = tk;
             Clear(ui.TakenList);
+            ui.TakenWhen.Clear();
             if (log.Count == 0) Empty(ui, ui.TakenList, "Nothing taken in this save");
             foreach (var t in log)
             {
@@ -1213,6 +1242,7 @@ public static class HostSettingsMenu
                 Text(ui, r, t.Summary, LabelX + 186, ui.RowW - LabelX - 186 - 112 - btn, Muted, 13, plain: true);
                 var when = Text(ui, r, TakenAgo(t.Utc), ui.RowW - 104 - btn, 96, Muted, 12);
                 when.alignment = TextAlignmentOptions.MidlineRight;
+                ui.TakenWhen.Add((when, t.Utc));
                 if (t.Record == null) continue;
                 var gb = RightBtn(ui, r, "Give back", 0, 112, () =>
                 {
@@ -1226,17 +1256,22 @@ public static class HostSettingsMenu
         foreach (var p in players)
             if (ui.PingTexts.TryGetValue(p.ClientId, out var pt) && pt != null)
                 pt.text = p.Ping >= 0 ? $"{p.Ping} ms" : "";
+        // "x min ago" is kept out of the list keys, so a minute ticking over doesn't rebuild rows.
+        foreach (var (t, utc) in ui.DepartedWhen) SetAgo(t, Ago(utc));
+        foreach (var (t, utc) in ui.TakenWhen) SetAgo(t, TakenAgo(utc));
 
         // Whitelist
-        ui.WhiteHeading.text = Heading("Whitelist", Whitelist.Players.Count);
-        var wk = string.Join("|", ListKey(Whitelist.Players)) + Whitelist.Enabled + "|" + string.Join(",", PresenceKey(Whitelist.Players));
+        var wlPlayers = Whitelist.Players;
+        bool wlOn = Whitelist.Enabled;
+        ui.WhiteHeading.text = Heading("Whitelist", wlPlayers.Count);
+        var wk = string.Join("|", ListKey(wlPlayers)) + wlOn + "|" + string.Join(",", PresenceKey(wlPlayers));
         if (force || wk != ui.LastWhiteKey)
         {
             ui.LastWhiteKey = wk;
             Clear(ui.White);
-            if (Whitelist.Players.Count == 0)
-                Empty(ui, ui.White, Whitelist.Enabled ? "Nobody else can join until you add someone" : "Nobody added");
-            foreach (var e in Whitelist.Players)
+            if (wlPlayers.Count == 0)
+                Empty(ui, ui.White, wlOn ? "Nobody else can join until you add someone" : "Nobody added");
+            foreach (var e in wlPlayers)
             {
                 var id = e.SteamId; var name = e.Name.Length > 0 ? e.Name : e.SteamId.ToString();
                 var r = Row(ui, ui.White, RowH);
@@ -1250,15 +1285,17 @@ public static class HostSettingsMenu
             Stripe(ui.White); Relayout(ui, ui.White);
         }
 
-        // Banned players (the key holds the time left, so the countdown updates)
-        ui.BlackHeading.text = Heading("Banned", BanList.Bans.Count);
-        var bk = string.Join("|", BanKey(BanList.Bans));
+        // Banned players (the time left is updated in place, so the countdown isn't part of the key)
+        var bans = BanList.Bans;
+        ui.BlackHeading.text = Heading("Banned", bans.Count);
+        var bk = string.Join("|", BanKey(bans));
         if (force || bk != ui.LastBlackKey)
         {
             ui.LastBlackKey = bk;
             Clear(ui.Black);
-            if (BanList.Bans.Count == 0) Empty(ui, ui.Black, "Nobody banned");
-            foreach (var e in BanList.Bans)
+            ui.BanLeft.Clear();
+            if (bans.Count == 0) Empty(ui, ui.Black, "Nobody banned");
+            foreach (var e in bans)
             {
                 var id = e.SteamId; var name = e.Name.Length > 0 ? e.Name : DepartedPlayers.NameOf(e.SteamId);
                 var r = Row(ui, ui.Black, RowH);
@@ -1266,11 +1303,18 @@ public static class HostSettingsMenu
                 bool hasReason = e.Reason.Length > 0;
                 Text(ui, r, name, NameX, hasReason ? 170 : 312, plain: true);
                 if (hasReason) Text(ui, r, e.Reason, NameX + 176, 190, Muted, 12, plain: true);
-                Text(ui, r, BanList.Remaining(e), NameX + 372, 150, e.Permanent ? Blocked : Muted, 13);
+                ui.BanLeft[id] = Text(ui, r, BanList.Remaining(e), NameX + 372, 150, e.Permanent ? Blocked : Muted, 13);
                 RightBtn(ui, r, "Unban", 0, 100, () => { BanList.Unban(id); SetStatus(ui, $"Unbanned {name}"); _nextRefresh = 0; });
             }
             Stripe(ui.Black); Relayout(ui, ui.Black);
         }
+        foreach (var e in bans)
+            if (ui.BanLeft.TryGetValue(e.SteamId, out var left)) SetAgo(left, BanList.Remaining(e));
+    }
+
+    private static void SetAgo(TextMeshProUGUI? t, string s)
+    {
+        if (t != null && !t.WasCollected && t.text != s) t.text = s;
     }
 
     private static IEnumerable<string> PresenceKey(IReadOnlyList<BanList.Entry> list)
@@ -1280,7 +1324,7 @@ public static class HostSettingsMenu
 
     private static IEnumerable<string> BanKey(IReadOnlyList<BanList.Entry> list)
     {
-        foreach (var e in list) yield return e.SteamId + ":" + BanList.Remaining(e) + ":" + e.Reason;
+        foreach (var e in list) yield return e.SteamId + ":" + e.Permanent + ":" + e.Reason;
     }
 
     private static string HelloKey(ulong id) =>
@@ -1294,12 +1338,13 @@ public static class HostSettingsMenu
         return string.Join("; ", parts);
     }
 
-    // The reason typed on the Access tab, for the ban being made now. The box clears for the next one.
-    private static string TakeReason(Ui ui)
+    // The reason typed on the Access tab, for the ban being made now.
+    private static string PeekReason(Ui ui) => BanList.CleanReason(ui.BanReason?.text);
+
+    // Cleared only once a ban went through, so a failed ban doesn't lose what was typed.
+    private static void ClearReason(Ui ui)
     {
-        string r = BanList.CleanReason(ui.BanReason?.text);
         if (ui.BanReason != null) ui.BanReason.text = "";
-        return r;
     }
 
     private static string ReasonNote(Ui ui)
@@ -1321,7 +1366,7 @@ public static class HostSettingsMenu
         ui.PickerTitle.text = whitelist ? "Add to whitelist" : "Ban friends";
         FillPicker(ui);
         FilterPicker(ui, "");
-        ActivateOnce(ui.Picker);
+        ActivateOnce(ui, true);
         ui.Picker.Open();
         try { ui.Search?.ActivateInputField(); } catch { }
     }
@@ -1354,7 +1399,7 @@ public static class HostSettingsMenu
             ui.PickerRows.Add((r.gameObject, fr.Name ?? ""));
             bool inWhite = Whitelist.Contains(fr.SteamId), inBlack = BanList.IsBanned(fr.SteamId);
             Avatar(r, fr.SteamId, inBlack ? Blocked : fr.InThisGame ? Playing : fr.Online ? OnlineDot : (Color?)null);
-            var name = Text(ui, r, fr.Name, NameX, 300, plain: true);
+            var name = Text(ui, r, fr.Name ?? "", NameX, 300, plain: true);
             if (fr.InThisGame) name.color = Playing;
             else if (!fr.Online && !inBlack) name.color = Muted;
             if (fr.InThisGame) Text(ui, r, "Playing Schedule I", NameX + 308, 180, Playing, 12);
@@ -1362,7 +1407,7 @@ public static class HostSettingsMenu
             Button? b = null;
             b = RightBtn(ui, r, ui.PickForWhitelist ? "Add" : "Ban", 0, 100, () =>
             {
-                bool ok = ui.PickForWhitelist ? Whitelist.Add(fr.SteamId, fr.Name) : AddBlack(ui, fr);
+                bool ok = ui.PickForWhitelist ? Whitelist.Add(fr.SteamId, fr.Name ?? "") : AddBlack(ui, fr);
                 if (ok) Done(b!, ui.PickForWhitelist ? "Added" : "Banned");
                 _nextRefresh = 0;
             });
@@ -1486,8 +1531,13 @@ public static class HostSettingsMenu
 
     private static bool AddBlack(Ui ui, Friends.Friend f)
     {
-        BanList.Ban(f.SteamId, f.Name, _banLength, TakeReason(ui));
-        return BanList.IsBanned(f.SteamId);
+        if (!BanList.Ban(f.SteamId, f.Name, _banLength, PeekReason(ui)))
+        {
+            SetStatus(ui, $"Couldn't ban {f.Name}: no valid Steam ID, or it's your own");
+            return false;
+        }
+        ClearReason(ui);
+        return true;
     }
 
     // --- Open / update -------------------------------------------------------------------------------
@@ -1500,14 +1550,15 @@ public static class HostSettingsMenu
         RefreshStatic(ui);
         RefreshLists(ui, true);
         SetStatus(ui, ui.InGame || HostLobby.TryGet(out _) ? "" : "These apply when you host a save");
-        ActivateOnce(ui.Screen);
-        ActivateOnce(ui.Picker);
+        ActivateOnce(ui, false);
+        ActivateOnce(ui, true);
         ui.Screen.Open();
     }
 
     public static void Update()
     {
         Avatars.Update();
+        DropStale();
         // F6: open from the pause menu while hosting.
         try
         {
@@ -1546,6 +1597,35 @@ public static class HostSettingsMenu
         }
     }
 
+    private static float _nextStaleCheck;
+    private static int _reinjects;   // gives up after a few tries so a broken layout doesn't retry forever
+
+    // A scene change destroys the screens we cloned; the old Ui would then fail silently on every
+    // use. Forget a destroyed one, and inject again if its scene is the active one and it's gone.
+    private static void DropStale()
+    {
+        if (_pause != null && IsGone(_pause)) { _pause = null; _reinjects = 0; }
+        if (_menu != null && IsGone(_menu)) { _menu = null; _reinjects = 0; }
+        if ((_pause != null && _menu != null) || Time.unscaledTime < _nextStaleCheck || _reinjects >= 5) return;
+        _nextStaleCheck = Time.unscaledTime + 10f;
+        try
+        {
+            string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            bool inGame = scene == "Main";
+            if ((inGame ? _pause : _menu) != null || (!inGame && scene != "Menu") || _injecting[inGame ? 1 : 0]) return;
+            _reinjects++;
+            _injecting[inGame ? 1 : 0] = true;
+            MelonCoroutines.Start(InjectWhenReady(inGame));
+        }
+        catch { }
+    }
+
+    private static bool IsGone(Ui ui)
+    {
+        try { return ui.Screen == null || ui.Screen.WasCollected || ui.Picker == null || ui.Picker.WasCollected; }
+        catch { return true; }
+    }
+
     private static Ui? Visible()
     {
         foreach (var ui in new[] { _pause, _menu })
@@ -1560,6 +1640,7 @@ public static class HostSettingsMenu
     // The game's lobby avatar grid (top right) draws over Host settings once it's more than two
     // rows tall (40+ players). Hide it while the screen is open; the Players tab lists everyone.
     private static GameObject? _hiddenGrid;
+    private static float _nextGridCheck;
 
     private static void HideBigLobbyGrid(bool screenOpen)
     {
@@ -1568,9 +1649,11 @@ public static class HostSettingsMenu
             if (!screenOpen)
             {
                 if (_hiddenGrid != null) { if (!_hiddenGrid.WasCollected) _hiddenGrid.SetActive(true); _hiddenGrid = null; }
+                _nextGridCheck = 0;
                 return;
             }
-            if (_hiddenGrid != null) return;
+            if (_hiddenGrid != null || Time.unscaledTime < _nextGridCheck) return;
+            _nextGridCheck = Time.unscaledTime + 1f;
             var grid = LobbySize.Grid;
             if (grid == null || grid.WasCollected || !grid.gameObject.activeInHierarchy) return;
             int shown = 0;
@@ -1598,5 +1681,3 @@ public static class HostSettingsMenu
         try { return InstanceFinder.IsServer; } catch { return false; }
     }
 }
-
-#endif

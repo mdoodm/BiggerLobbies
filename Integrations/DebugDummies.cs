@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using Il2CppScheduleOne.PlayerScripts;
@@ -19,7 +18,6 @@ public static class DebugDummies
 {
     private static MelonPreferences_Entry<int>? _count;
     private static readonly List<GameObject> _dummies = new();
-    private static readonly List<float> _phase = new();
     private static Vector3 _centre;
     private static float _spawnAfter = -1f;
 
@@ -77,7 +75,6 @@ public static class DebugDummies
             go.name = $"BiggerLobbies_Dummy_{i + 1}";
             MakeVisible(go);
             _dummies.Add(go);
-            _phase.Add(i);
         }
         Place(0f);
         Utils.Log.Info($"[dummies] spawned {_dummies.Count} dummy characters around you");
@@ -130,7 +127,6 @@ public static class DebugDummies
             if (go != null) UnityEngine.Object.Destroy(go);
         if (_dummies.Count > 0) Utils.Log.Info($"[dummies] removed {_dummies.Count} dummy characters");
         _dummies.Clear();
-        _phase.Clear();
     }
 
     private static void ResetFps()
@@ -153,5 +149,3 @@ public static class DebugDummies
         ResetFps();
     }
 }
-
-#endif

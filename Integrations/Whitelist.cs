@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,12 +30,25 @@ public static class Whitelist
         if (Enabled) Utils.Log.Info("Whitelist is on: only players you add in Host settings can join, and the list starts empty");
     }
 
-    public static void SetEnabled(bool on)
+    /// <param name="evict">When turning on, also disconnect connected players who aren't listed.</param>
+    public static void SetEnabled(bool on, bool evict = true)
     {
         if (_enabled == null || _enabled.Value == on) return;
         _enabled.Value = on;
         MelonPreferences.Save();
         Utils.Log.Info(on ? "Whitelist turned on" : "Whitelist turned off");
+        if (on && evict) EvictUnlisted();
+    }
+
+    /// <summary>
+    /// Disconnects connected players (never the host) who aren't listed. Does nothing while
+    /// the list is empty: the list starts empty each session, so switching the whitelist on
+    /// before picking anyone would otherwise throw out everyone already here.
+    /// </summary>
+    public static void EvictUnlisted()
+    {
+        if (!Enabled || _allowed.Count == 0) return;
+        HostPlayers.DisconnectWhere(id => !Contains(id), KickNotice.Kind.Whitelist, "not on the whitelist");
     }
 
     public static void WarnIfEmpty()
@@ -77,7 +89,8 @@ public static class Whitelist
     }
 
     /// <summary>Called when a connection sends its Steam login. Disconnects players who aren't listed.</summary>
-    public static bool RejectIfNotListed(NetworkConnection conn, ulong steamId)
+    /// <param name="confirmed">False when the ID is only the client's claim: refuse the connection but name nobody in a notice.</param>
+    public static bool RejectIfNotListed(NetworkConnection conn, ulong steamId, bool confirmed = true)
     {
         if (!Enabled || steamId == 0 || steamId == BanList.HostSteamId() || Contains(steamId)) return false;
         float now = UnityEngine.Time.realtimeSinceStartup;
@@ -86,9 +99,7 @@ public static class Whitelist
             _lastRefusedLog[steamId] = now;
             Utils.Log.Info($"Refused {Friends.NameOf(steamId)} ({steamId}): not on the whitelist");
         }
-        KickNotice.Remove(conn, steamId, KickNotice.Kind.Whitelist, null, "", conn.Authenticated ? KickNotice.DisconnectDelay : KickNotice.QuickDelay);
+        KickNotice.Remove(conn, confirmed ? steamId : 0, KickNotice.Kind.Whitelist, null, "", conn.Authenticated ? KickNotice.DisconnectDelay : KickNotice.QuickDelay);
         return true;
     }
 }
-
-#endif

@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
@@ -15,13 +14,8 @@ namespace BiggerLobbies.Integrations;
 // Game 0.4.7 moved the Steam lobby logic from Lobby into SteamLobbyService,
 // and made Lobby.PlayerLimit a static field the game itself uses.
 [HarmonyPatch]
-public static class HarmonyPatches
+public static class LobbyHarmonyPatches
 {
-    private static Core? _modInstance;
-
-    /// <summary>Set the mod instance for patch callbacks (called from Core).</summary>
-    public static void SetModInstance(Core modInstance) => _modInstance = modInstance;
-
     // --- Lobby ---------------------------------------------------------------
 
     // NOTE: Lobby.PlayerLimit must NOT be written: in 0.4.7 it is a compile-time
@@ -215,11 +209,10 @@ public static class HarmonyPatches
     {
         try
         {
-            if (__instance.Lobby == null || __instance.InviteButton == null) return;
+            // Before a lobby exists IsHost is false; leave the game's own visibility alone then.
+            if (__instance.Lobby == null || __instance.InviteButton == null || !__instance.Lobby.IsInLobby) return;
             __instance.InviteButton.gameObject.SetActive(__instance.Lobby.IsHost && __instance.Lobby.PlayerCount < LobbySize.MaxPlayers);
         }
         catch (Exception e) { MelonLogger.Error($"Failed to patch UpdateButtons: {e}"); }
     }
 }
-
-#endif

@@ -57,7 +57,6 @@ The mod writes only warnings and errors to the log unless `DiagnosticLog` is on.
 | `Integrations/GrowSyncFix.cs` | Plant sync |
 | `Integrations/DebugDummies.cs` | `DebugDummyPlayers`: dummy characters and frame-rate logging |
 | `Integrations/DiagnosticPatches.cs` | `[diag]` logging |
-| `Integrations/HarmonyPatches.cs` | The original patches, used by the Mono build only |
 | `Utils/Log.cs` | Quiet logging and the `DiagnosticLog` setting |
 | `Utils/MiniJson.cs` | A small JSON reader and writer for the Give back records |
 | `Utils/Constants.cs` | Default player limit and mod info |
@@ -74,6 +73,6 @@ You need the .NET SDK (6.0 or later).
    ```
 
 > [!WARNING]
-> The project's post-build step **force-closes `Schedule I.exe`**, copies the DLL into `$(GamePath)\Mods` and starts the game again. Add `-p:SkipDeploy=true` to build without it.
+> On Windows the post-build step copies the DLL into `$(GamePath)\Mods`; add `-p:SkipDeploy=true` to skip that. Add `-p:Deploy=true` to also force-close `Schedule I.exe` before the copy and start the game again afterwards.
 
 The extra lobby slots are copies of the game's own slot, and Host settings is a copy of the game's Settings screen, so a future game update that changes either screen could make them look wrong.

@@ -1,14 +1,12 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using Il2CppFishNet;
 using Il2CppFishNet.Connection;
-using Il2CppFishNet.Transporting.Multipass;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppScheduleOne.PlayerScripts;
 using Il2CppSteamworks;
 using MelonLoader;
-using SteamTransport = Il2CppFishySteamworks.FishySteamworks;
+using BiggerLobbies.Utils;
 
 namespace BiggerLobbies.Integrations;
 
@@ -92,8 +90,8 @@ public static class HostPlayers
                 var p = list[i];
                 if (p == null || p.IsLocalPlayer) continue;
                 var conn = p.Connection;
-                if (conn == null || conn.IsLocalClient) continue;
-                ulong sid = BanList.VerifiedSteamId(conn.ClientId);
+                if (conn == null || conn.IsLocalClient || !conn.IsActive) continue;
+                ulong sid = IdOf(conn);
                 rows.Add(new Row
                 {
                     Name = string.IsNullOrEmpty(p.PlayerName) ? "Unnamed player" : p.PlayerName,
@@ -114,35 +112,88 @@ public static class HostPlayers
         if (r.Fake) return $"{r.Name} is a test player (DebugFakePlayers). Nothing to {(ban ? "ban" : "kick")}";
         try
         {
-            if (ban) { BanList.Ban(r.SteamId, r.Name, length, reason); return $"Banned {r.Name} ({BanLength.Label(length).ToLowerInvariant()})"; }
             var conn = FindConnection(r.ClientId);
+            if (ban)
+            {
+                if (BanList.Ban(r.SteamId, r.Name, length, reason)) return $"Banned {r.Name} ({BanLength.Label(length).ToLowerInvariant()})";
+                // No usable Steam ID (or it's the host's own): the ban can't be recorded, so only remove them.
+                if (conn == null || conn.IsLocalClient) return $"Couldn't ban {r.Name}: no verified Steam ID";
+                KickNotice.Remove(conn, r.SteamId, KickNotice.Kind.Kick, bypassCap: true);
+                Utils.Log.Info($"Couldn't ban {r.Name}; kicked instead");
+                return $"Couldn't ban {r.Name}: no verified Steam ID. Kicked them instead";
+            }
             if (conn == null) return $"{r.Name} has already left";
             if (conn.IsLocalClient) return "";
-            KickNotice.Remove(conn, r.SteamId, KickNotice.Kind.Kick);
+            KickNotice.Remove(conn, r.SteamId, KickNotice.Kind.Kick, bypassCap: true);
             Utils.Log.Info($"Kicked {r.Name}{(r.SteamId != 0 ? $" ({r.SteamId})" : "")}");
             return $"Kicked {r.Name}. They can rejoin unless you ban them";
         }
         catch (Exception e) { return $"Couldn't remove {r.Name}: {e.Message}"; }
     }
 
-    /// <summary>Disconnects every connected player whose checked Steam ID is this one.</summary>
+    /// <summary>Disconnects every connected player whose checked Steam ID is this one, including connections still loading.</summary>
     public static void DisconnectSteamId(ulong id, TimeSpan? length = null, string reason = "")
     {
         try
         {
             if (id == 0 || !InstanceFinder.IsServer) return;
-            var list = Player.PlayerList;
-            if (list == null) return;
-            for (int i = 0; i < list.Count; i++)
+            int n = DisconnectWhere(x => x == id, KickNotice.Kind.Ban, "banned", length, reason);
+            // A connection the transport knows by this ID that hasn't sent its login yet.
+            if (n == 0 && SteamIdentity.TryGetClientId(id, out int cid)
+                && Clients()?.TryGetValue(cid, out var c) == true && c != null && !c.IsLocalClient && c.IsActive)
             {
-                var c = list[i]?.Connection;
-                if (c == null || c.IsLocalClient || !c.IsActive) continue;
-                if (BanList.VerifiedSteamId(c.ClientId) != id) continue;
-                KickNotice.Remove(c, id, KickNotice.Kind.Ban, length, reason);
-                Utils.Log.Info($"Disconnected {list[i].PlayerName} ({id}): banned");
+                KickNotice.Remove(c, id, KickNotice.Kind.Ban, length, reason, bypassCap: true);
+                Utils.Log.Info($"Disconnected connection {cid} ({id}): banned");
             }
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect banned player: {e.Message}"); }
+    }
+
+    private static Il2CppSystem.Collections.Generic.Dictionary<int, NetworkConnection>? Clients()
+    {
+        try { return InstanceFinder.ServerManager?.Clients; } catch { return null; }
+    }
+
+    // Steam ID of a remote connection: the transport's word first, then the login the host saw.
+    private static ulong IdOf(NetworkConnection c) =>
+        SteamIdentity.TryGetVerified(c, out ulong v) ? v : BanList.VerifiedSteamId(c.ClientId);
+
+    /// <summary>
+    /// Disconnects connected non-host players (spawned or still loading) whose Steam ID matches,
+    /// with a notice of this kind. Returns how many.
+    /// </summary>
+    public static int DisconnectWhere(Func<ulong, bool> match, KickNotice.Kind kind, string why, TimeSpan? length = null, string reason = "")
+    {
+        int count = 0;
+        try
+        {
+            if (!InstanceFinder.IsServer) return 0;
+            ulong host = BanList.HostSteamId();
+            var seen = new HashSet<int>();
+            var conns = new List<NetworkConnection>();
+            var list = Player.PlayerList;
+            if (list != null)
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var pc = list[i]?.Connection;
+                    if (pc != null && seen.Add(pc.ClientId)) conns.Add(pc);
+                }
+            var clients = Clients();
+            if (clients != null)
+                foreach (var kv in BanList.Logins())
+                    if (seen.Add(kv.Key) && clients.TryGetValue(kv.Key, out var lc) && lc != null) conns.Add(lc);
+            foreach (var c in conns)
+            {
+                if (c.IsLocalClient || !c.IsActive) continue;
+                ulong id = IdOf(c);
+                if (id == 0 || id == host || !match(id)) continue;
+                KickNotice.Remove(c, id, kind, length, reason, bypassCap: true);
+                Utils.Log.Info($"Disconnected {Friends.NameOf(id)} ({id}): {why}");
+                count++;
+            }
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect players ({why}): {e.Message}"); }
+        return count;
     }
 
     // Look the player up again at click time; a row can be up to a second old.
@@ -158,23 +209,7 @@ public static class HostPlayers
         return null;
     }
 
-    private static Il2CppFishySteamworks.Server.ServerSocket? SteamServer()
-    {
-        try
-        {
-            var t = InstanceFinder.TransportManager?.Transport;
-            if (t == null) return null;
-            var mp = t.TryCast<Multipass>();
-            if (mp?._transports != null)
-                for (int i = 0; i < mp._transports.Count; i++)
-                {
-                    var s = mp._transports[i]?.TryCast<SteamTransport>();
-                    if (s?._server != null) return s._server;
-                }
-            return t.TryCast<SteamTransport>()?._server;
-        }
-        catch { return null; }
-    }
+    private static Il2CppFishySteamworks.Server.ServerSocket? SteamServer() => SteamIdentity.Server();
 
     private static bool _pingWarned;
 
@@ -199,5 +234,3 @@ public static class HostPlayers
         }
     }
 }
-
-#endif

@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -41,14 +40,17 @@ public static class KickNotice
 
     private static readonly HashSet<ulong> _hidden = new();
     private static readonly Dictionary<ulong, float> _lastSent = new();
+    private static readonly Queue<float> _sentTimes = new();
+    private const int RateMax = 6;
+    private const float RateWindow = 10f;
 
     /// <summary>True for players the host removed this session, or has banned.</summary>
     public static bool IsHidden(ulong id) => id != 0 && (_hidden.Contains(id) || BanList.IsBanned(id));
 
     /// <summary>Tells the player (if they have the mod) why, hides them, then disconnects this connection after the delay.</summary>
-    public static void Remove(NetworkConnection? conn, ulong steamId, Kind kind, TimeSpan? length = null, string reason = "", float delay = DisconnectDelay)
+    public static void Remove(NetworkConnection? conn, ulong steamId, Kind kind, TimeSpan? length = null, string reason = "", float delay = DisconnectDelay, bool bypassCap = false)
     {
-        Send(steamId, kind, length, reason);
+        Send(steamId, kind, length, reason, bypassCap);
         Hide(steamId);
         if (conn != null) MelonCoroutines.Start(DisconnectLater(conn, delay));
     }
@@ -61,17 +63,31 @@ public static class KickNotice
     }
 
     /// <summary>Posts the notice in the lobby chat. Repeats for the same player are spaced out.</summary>
-    public static void Send(ulong steamId, Kind kind, TimeSpan? length = null, string reason = "")
+    public static void Send(ulong steamId, Kind kind, TimeSpan? length = null, string reason = "", bool bypassCap = false)
     {
         try
         {
             if (steamId == 0 || !HostLobby.TryGet(out var lobby)) return;
             float now = Time.realtimeSinceStartup;
             if (_lastSent.TryGetValue(steamId, out float last) && now - last < 3f) return;
+            // Global cap, so a flood of refused logins can't spam the lobby chat.
+            // Host-initiated bulk actions (bypassCap) are not login-triggered, so they aren't capped or counted.
+            if (!bypassCap)
+            {
+                while (_sentTimes.Count > 0 && now - _sentTimes.Peek() > RateWindow) _sentTimes.Dequeue();
+                if (_sentTimes.Count >= RateMax)
+                {
+                    Utils.Log.Info($"Notice rate limit reached: no {kind} notice sent for {steamId}");
+                    return;
+                }
+                _sentTimes.Enqueue(now);
+            }
             _lastSent[steamId] = now;
             long secs = length.HasValue ? (long)Math.Max(1, length.Value.TotalSeconds) : -1;
-            string why = kind == Kind.Ban ? Ascii(reason) : "";
-            var bytes = Encoding.ASCII.GetBytes($"{Prefix}{steamId}|{kind.ToString().ToLowerInvariant()}|{secs}{(why.Length > 0 ? "|" + why : "")}");
+            // The lobby chat is readable by every member, so the host's free-text ban reason
+            // stays out of it; the kind and length are all the banned player's popup needs.
+            // (Receivers still accept an optional 4th field from older versions of the mod.)
+            var bytes = Encoding.ASCII.GetBytes($"{Prefix}{steamId}|{kind.ToString().ToLowerInvariant()}|{secs}");
             var buf = new Il2CppStructArray<byte>(bytes.Length + 1);
             for (int i = 0; i < bytes.Length; i++) buf[i] = bytes[i];
             SteamMatchmaking.SendLobbyChatMsg(lobby, buf, buf.Length);
@@ -96,7 +112,7 @@ public static class KickNotice
         {
             if (steamId == 0 || !_hidden.Remove(steamId)) return;
             try { HostLobby.Service()?.UpdateLobbyMembers(); } catch { }
-            HarmonyPatches.RefreshLobbyScreen();
+            LobbyHarmonyPatches.RefreshLobbyScreen();
             Utils.Log.Info($"{steamId} was let in again; showing them on the lobby screen");
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't show a rejoined player again: {e.Message}"); }
@@ -107,7 +123,7 @@ public static class KickNotice
         if (steamId == 0) return;
         _hidden.Add(steamId);
         try { HostLobby.Service()?.UpdateLobbyMembers(); } catch { }
-        HarmonyPatches.RefreshLobbyScreen();
+        LobbyHarmonyPatches.RefreshLobbyScreen();
     }
 
     // Drop hidden players from the member list the lobby screen and counts read.
@@ -162,6 +178,7 @@ public static class KickNotice
             var buf = new Il2CppStructArray<byte>(256);
             int n = SteamMatchmaking.GetLobbyChatEntry(lobby, (int)result.m_iChatID, out _, buf, buf.Length, out _);
             if (n <= Prefix.Length) return;
+            if (n > buf.Length) n = buf.Length;
             var bytes = new byte[n];
             for (int i = 0; i < n; i++) bytes[i] = buf[i];
             string msg = Encoding.ASCII.GetString(bytes).TrimEnd('\0');
@@ -170,7 +187,8 @@ public static class KickNotice
             var parts = msg.Substring(Prefix.Length).Split('|');
             if (parts.Length < 3 || !ulong.TryParse(parts[0], out ulong target) || target != me) return;
             long.TryParse(parts[2], out long secs);
-            Show(parts[1], secs, SafeName(owner), parts.Length >= 4 ? parts[3].Trim() : "");
+            if (secs > 3650L * 86400) secs = 3650L * 86400;   // a ban is never longer than ten years
+            Show(parts[1], secs, SafeName(owner), parts.Length >= 4 ? Ascii(parts[3]) : "");
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't read a lobby message: {e.Message}"); }
     }
@@ -251,5 +269,3 @@ public static class KickNotice
         _notice = null;
     }
 }
-
-#endif

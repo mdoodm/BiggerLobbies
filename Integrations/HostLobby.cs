@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Networking;
@@ -42,5 +41,3 @@ public static class HostLobby
         catch { return 0; }
     }
 }
-
-#endif

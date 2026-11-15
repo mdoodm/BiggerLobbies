@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -71,7 +70,7 @@ public static class BanList
         {
             var s = part.Trim();
             int i = 0;
-            while (i < s.Length && char.IsDigit(s[i])) i++;
+            while (i < s.Length && s[i] >= '0' && s[i] <= '9') i++;
             if (i == 0 || !ulong.TryParse(s.Substring(0, i), out ulong id) || id == 0)
             {
                 if (s.Length > 0) MelonLogger.Warning($"Banned players: '{s}' doesn't start with a Steam ID; skipped");
@@ -169,6 +168,8 @@ public static class BanList
     // A player's PlayerCode is reported by their own game, so it's never used for bans.
     private static readonly Dictionary<int, ulong> _verified = new();
     public static void RecordLogin(int clientId, ulong steamId) => _verified[clientId] = steamId;
+    /// <summary>Snapshot of (connection id, Steam ID) for every login seen on open connections.</summary>
+    public static List<KeyValuePair<int, ulong>> Logins() => _verified.ToList();
     public static ulong VerifiedSteamId(int clientId) => _verified.TryGetValue(clientId, out var id) ? id : 0;
 
     /// <summary>Called when a connection closes (StaleAuthFix), so the map doesn't grow all session.</summary>
@@ -178,6 +179,7 @@ public static class BanList
     public static bool IsConnected(ulong steamId)
     {
         if (steamId == 0) return false;
+        if (Utils.SteamIdentity.TryGetClientId(steamId, out _)) return true;   // transport-verified, even without a login record
         Il2CppSystem.Collections.Generic.Dictionary<int, NetworkConnection>? clients = null;
         try { clients = InstanceFinder.ServerManager?.Clients; } catch { }
         foreach (var kv in _verified)
@@ -198,10 +200,11 @@ public static class BanList
     private static readonly Dictionary<ulong, float> _lastRefusedLog = new();
 
     /// <summary>Bans for the given time (null = permanent). Re-banning replaces the old length.</summary>
-    public static void Ban(ulong id, string name, TimeSpan? length = null, string reason = "")
+    /// <returns>False when nothing was banned (no valid Steam ID, or it's the host's own).</returns>
+    public static bool Ban(ulong id, string name, TimeSpan? length = null, string reason = "")
     {
-        if (id == 0) return;
-        if (id == HostSteamId()) { MelonLogger.Warning("Refused to ban your own Steam ID"); return; }
+        if (id == 0) return false;
+        if (id == HostSteamId()) { MelonLogger.Warning("Refused to ban your own Steam ID"); return false; }
         DateTime? until = length.HasValue ? DateTime.UtcNow + length.Value : null;
         _bans.RemoveAll(b => b.SteamId == id);
         Whitelist.Remove(id);
@@ -210,6 +213,7 @@ public static class BanList
         Store();
         Utils.Log.Info($"Banned {Clean(name)} ({id}) {(until.HasValue ? "until " + until.Value.ToString("u", CultureInfo.InvariantCulture) : "permanently")}{(reason.Length > 0 ? ": " + reason : "")}");
         HostPlayers.DisconnectSteamId(id, length, reason);
+        return true;
     }
 
     public static void Unban(ulong id)
@@ -221,8 +225,10 @@ public static class BanList
     }
 
     /// <summary>Called when a connection sends its Steam login. Disconnects banned players.</summary>
-    public static bool RejectIfBanned(NetworkConnection conn, ulong steamId)
+    /// <param name="confirmed">False when the ID is only the client's claim: refuse the connection but name nobody in a notice.</param>
+    public static bool RejectIfBanned(NetworkConnection conn, ulong steamId, bool confirmed = true)
     {
+        if (conn.IsLocalClient || (steamId != 0 && steamId == HostSteamId())) return false;   // never refuse the host
         if (!IsBanned(steamId)) return false;
         var e = _bans.First(b => b.SteamId == steamId);
         float now = UnityEngine.Time.realtimeSinceStartup;
@@ -233,9 +239,7 @@ public static class BanList
         }
         TimeSpan? left = e.Until.HasValue ? e.Until.Value - DateTime.UtcNow : null;
         // Refused at their first login nothing else is in flight, so a short wait is enough for the notice.
-        KickNotice.Remove(conn, steamId, KickNotice.Kind.Ban, left, e.Reason, conn.Authenticated ? KickNotice.DisconnectDelay : KickNotice.QuickDelay);
+        KickNotice.Remove(conn, confirmed ? steamId : 0, KickNotice.Kind.Ban, left, e.Reason, conn.Authenticated ? KickNotice.DisconnectDelay : KickNotice.QuickDelay);
         return true;
     }
 }
-
-#endif

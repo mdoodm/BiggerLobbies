@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
@@ -14,8 +13,9 @@ public static class Avatars
 {
     private static readonly Dictionary<ulong, Texture2D> _cache = new();
     private static readonly HashSet<ulong> _requested = new();
-    private static readonly List<(RawImage img, ulong id)> _pending = new();
+    private static readonly List<(RawImage img, ulong id, int tries)> _pending = new();
     private static float _nextTry;
+    private const int MaxTries = 60;   // polls 0.5 s apart: stop waiting on an avatar Steam never delivers
 
     /// <summary>Shows the avatar for this Steam ID on the image now, or as soon as Steam has it.</summary>
     public static void Show(RawImage img, ulong id)
@@ -25,7 +25,12 @@ public static class Avatars
         if (id == 0) return;
         var tex = Get(id);
         if (tex != null) Apply(img, tex);
-        else _pending.Add((img, id));
+        else
+        {
+            // An image that is shown again replaces its earlier wait instead of stacking up.
+            _pending.RemoveAll(p => p.img == img);
+            _pending.Add((img, id, 0));
+        }
     }
 
     private static void Apply(RawImage img, Texture2D tex)
@@ -42,10 +47,15 @@ public static class Avatars
         _nextTry = Time.unscaledTime + 0.5f;
         for (int i = _pending.Count - 1; i >= 0; i--)
         {
-            var (img, id) = _pending[i];
+            var (img, id, tries) = _pending[i];
             if (img == null || img.WasCollected) { _pending.RemoveAt(i); continue; }
             var tex = Get(id);
-            if (tex == null) continue;
+            if (tex == null)
+            {
+                if (tries + 1 >= MaxTries) _pending.RemoveAt(i);
+                else _pending[i] = (img, id, tries + 1);
+                continue;
+            }
             Apply(img, tex);
             _pending.RemoveAt(i);
         }
@@ -78,5 +88,3 @@ public static class Avatars
         catch { return null; }
     }
 }
-
-#endif

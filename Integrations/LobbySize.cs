@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using HarmonyLib;
 using Il2CppFishNet;
@@ -64,36 +63,42 @@ public static class LobbySize
     {
         try
         {
-            var transport = InstanceFinder.TransportManager?.Transport;
-            if (transport == null) return;
-            var multipass = transport.TryCast<Multipass>();
-            if (multipass?._transports != null)
+            var steam = Utils.SteamIdentity.Transport();
+            if (steam == null) return;
+            int before = steam._maximumClients;
+            if (before < MaxPlayers)
             {
-                var list = multipass._transports;
-                for (int i = 0; i < list.Count; i++) RaiseSteamLimit(list[i], when);
+                ApplyMaxClients(steam, MaxPlayers);
+                Utils.Log.Info($"Steam transport player limit raised from {before} to {MaxPlayers} ({when})");
+                _lastLogged = MaxPlayers;
             }
-            else RaiseSteamLimit(transport, when);
+            else if (before != _lastLogged)
+            {
+                Utils.Log.Info($"Steam transport player limit is {before}; lobby size {MaxPlayers} fits ({when})");
+                _lastLogged = before;
+            }
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't check the network transport's player limit: {e.Message}"); }
     }
 
-    private static void RaiseSteamLimit(Transport? t, string when)
+    // One way to set the Steam transport's limit, used by both the startup raise and the live
+    // change. The field is what FishySteamworks copies into the server socket when the server
+    // starts; the ServerSocket's own SetMaximumClients is what changes a running socket. The
+    // transport-level SetMaximumClients is deliberately not used: upstream FishySteamworks only
+    // writes the field there (and refuses while the server runs), so it can't update a live
+    // socket. (Bodies are native here, so that part is from upstream source, not verified.)
+    private static string ApplyMaxClients(SteamTransport steam, int n)
     {
-        var steam = t?.TryCast<SteamTransport>();
-        if (steam == null) return;
-        int before = steam._maximumClients;
-        if (before < MaxPlayers)
+        steam._maximumClients = (ushort)n;
+        _lastLogged = n;
+        var server = steam._server;
+        if (server == null) return $"transport limit {n} (server not started)";
+        try
         {
-            steam._maximumClients = (ushort)MaxPlayers;
-            try { if (steam._server != null) steam.SetMaximumClients(MaxPlayers); } catch { }
-            Utils.Log.Info($"Steam transport player limit raised from {before} to {MaxPlayers} ({when})");
-            _lastLogged = MaxPlayers;
+            server.SetMaximumClients(n);
+            return $"transport limit now {server.GetMaximumClients()}";
         }
-        else if (before != _lastLogged)
-        {
-            Utils.Log.Info($"Steam transport player limit is {before}; lobby size {MaxPlayers} fits ({when})");
-            _lastLogged = before;
-        }
+        catch (Exception e) { return $"transport limit field set to {n}, live socket not changed ({e.Message})"; }
     }
 
     // --- Changing the size while hosting -------------------------------------------------
@@ -110,7 +115,7 @@ public static class LobbySize
         int before = MaxPlayers;
         if (n == before) return $"Lobby size is {n}";
         MaxPlayers = n;
-        if (_entry != null) { _entry.Value = n; MelonPreferences.Save(); }
+        if (_entry != null && _entry.Value != n) { _entry.Value = n; MelonPreferences.Save(); }
 
         string steamPart = "not hosting a Steam lobby yet";
         if (HostLobby.TryGet(out var id))
@@ -130,7 +135,7 @@ public static class LobbySize
         }
 
         string transportPart = SetSteamLimit(n);
-        HarmonyPatches.RefreshLobbyScreen();
+        LobbyHarmonyPatches.RefreshLobbyScreen();
         string msg = $"Lobby size changed from {before} to {n} while running: {steamPart}; {transportPart}";
         Utils.Log.Info(msg);
         return $"Lobby size {n}. {steamPart}";
@@ -140,22 +145,9 @@ public static class LobbySize
     {
         try
         {
-            var transport = InstanceFinder.TransportManager?.Transport;
-            if (transport == null) return "no network transport yet";
-            var multipass = transport.TryCast<Multipass>();
-            SteamTransport? steam = null;
-            if (multipass?._transports != null)
-            {
-                for (int i = 0; i < multipass._transports.Count && steam == null; i++)
-                    steam = multipass._transports[i]?.TryCast<SteamTransport>();
-            }
-            else steam = transport.TryCast<SteamTransport>();
+            var steam = Utils.SteamIdentity.Transport();
             if (steam == null) return "no Steam transport found";
-            steam._maximumClients = (ushort)n;
-            _lastLogged = n;
-            if (steam._server == null) return $"transport limit {n} (server not started)";
-            steam._server.SetMaximumClients(n);
-            return $"transport limit now {steam._server.GetMaximumClients()}";
+            return ApplyMaxClients(steam, n);
         }
         catch (Exception e) { return $"transport limit not changed ({e.Message})"; }
     }
@@ -183,10 +175,22 @@ public static class LobbySize
     public static GridLayoutGroup? Grid => _grid;
     private static float _cellX = 75f, _origSpacingX = -150f, _spacingY;
     private static bool _loggedLayout;
+    private static bool _tableApplied;                 // grid is in table mode and the invite button is out of the layout
+    private static GridLayoutGroup.Constraint _origConstraint = GridLayoutGroup.Constraint.Flexible;
+    private static int _origConstraintCount;
+    private static bool _inviteHadIgnoreLayout;
+    private static bool _inviteAddedLayoutElement;
+    private static RectTransform? _invite;
 
     public static void RememberGrid(GridLayoutGroup grid)
     {
+        if (grid != _grid) _tableApplied = false; // new lobby screen: its layout is untouched
         _grid = grid;
+        if (!_tableApplied) // don't capture our own table settings as the originals
+        {
+            _origConstraint = grid.constraint;
+            _origConstraintCount = grid.constraintCount;
+        }
         _cellX = grid.cellSize.x;
         _origSpacingX = grid.spacing.x;
         _spacingY = grid.spacing.y;
@@ -230,15 +234,44 @@ public static class LobbySize
             LayoutRebuilder.ForceRebuildLayoutImmediate(gridRT);
             var invite = _grid.transform.GetChild(0).GetComponent<RectTransform>();
             if (invite == null) return;
+            _invite = invite;
             Vector2 first = invite.anchoredPosition;          // cell 0 of the table
             var le = invite.GetComponent<LayoutElement>();
+            if (!_tableApplied) // don't record our own state as the originals
+                _inviteAddedLayoutElement = le == null;
             if (le == null) le = invite.gameObject.AddComponent<LayoutElement>();
+            if (!_tableApplied) _inviteHadIgnoreLayout = le.ignoreLayout;
             le.ignoreLayout = true;
             float step = -(_cellX + _origSpacingX);           // 75 px between columns
             invite.anchoredPosition = new Vector2(first.x - step, first.y);
             LayoutRebuilder.ForceRebuildLayoutImmediate(gridRT);
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't move the invite button out of the table: {e.Message}"); }
+    }
+
+    // Back to the game's single row once the lobby is small again.
+    private static void RestoreRow()
+    {
+        try
+        {
+            if (_grid == null) return;
+            _grid.constraint = _origConstraint;
+            _grid.constraintCount = _origConstraintCount;
+            _grid.spacing = new Vector2(_origSpacingX, _spacingY);
+            if (_invite != null && !_invite.WasCollected)
+            {
+                var le = _invite.GetComponent<LayoutElement>();
+                if (le != null)
+                {
+                    if (_inviteAddedLayoutElement) UnityEngine.Object.Destroy(le);
+                    else le.ignoreLayout = _inviteHadIgnoreLayout;
+                }
+            }
+            _invite = null;
+            _tableApplied = false;
+            LayoutRebuilder.MarkLayoutForRebuild(_grid.GetComponent<RectTransform>());
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't restore the lobby row layout: {e.Message}"); }
     }
 
     /// <summary>Lays the shown slots out as rows of 20; returns how many players aren't shown.</summary>
@@ -253,7 +286,11 @@ public static class LobbySize
             active++;
             if (active > MaxShown) s.gameObject.SetActive(false);
         }
-        if (MaxPlayers <= Tested) return 0; // original single row, untouched
+        if (MaxPlayers <= Tested) // original single row
+        {
+            if (_tableApplied) RestoreRow();
+            return 0;
+        }
 
         if (_grid.constraint != GridLayoutGroup.Constraint.FixedColumnCount || _grid.constraintCount != PerRow)
         {
@@ -261,9 +298,8 @@ public static class LobbySize
             _grid.constraintCount = PerRow;
             _grid.spacing = new Vector2(_origSpacingX, _spacingY);
             MoveInviteOutOfTable();
+            _tableApplied = true;
         }
         return Math.Max(0, active - MaxShown);
     }
 }
-
-#endif

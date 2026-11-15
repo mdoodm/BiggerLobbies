@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +44,7 @@ public static class Crews
             {
                 var s = m.Trim();
                 int i = 0;
-                while (i < s.Length && char.IsDigit(s[i])) i++;
+                while (i < s.Length && s[i] >= '0' && s[i] <= '9') i++;
                 if (i == 0 || !ulong.TryParse(s.Substring(0, i), out ulong id) || id == 0) continue;
                 string name = s.Substring(i).Trim().Trim('(', ')').Trim();
                 if (crew.Members.All(e => e.SteamId != id)) crew.Members.Add(new BanList.Entry(id, name));
@@ -95,7 +94,8 @@ public static class Crews
         var crew = _crews.FirstOrDefault(c => c.Name == name);
         if (crew == null) return "That crew no longer exists";
         int added = Whitelist.Replace(crew.Members);
-        Whitelist.SetEnabled(true);
+        Whitelist.SetEnabled(true, evict: false);
+        Whitelist.EvictUnlisted();   // also when the whitelist was already on
         int skipped = crew.Members.Count - added;
         return skipped > 0
             ? $"Loaded {name}: {added} on the whitelist, {skipped} banned and left off"
@@ -107,5 +107,3 @@ public static class Crews
         if (_crews.RemoveAll(c => c.Name == name) > 0) Store();
     }
 }
-
-#endif

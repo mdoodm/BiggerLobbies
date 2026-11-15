@@ -1,5 +1,4 @@
-﻿#if !MONO
-using System;
+﻿using System;
 using HarmonyLib;
 using Il2CppFishNet;
 using Il2CppScheduleOne.DevUtilities;
@@ -32,29 +31,16 @@ public static class AutoSave
     private static float _nextPlayerSave;
     private static int _lastPlayerCount = -1;
 
-    public static void Init()
+    // Called from Core.OnInitializeMelon, after the other features' Init and before GrowSyncFix/LateJoinFix/AlwaysHostLobby.
+    public static void Init(MelonPreferences_Category cat)
     {
-        _cat = MelonPreferences.CreateCategory("BiggerLobbies");
-        Utils.Log.Init(_cat);
-        LobbySize.Init(_cat);
-        DebugDummies.Init(_cat);
-        LobbyPrivacy.Init(_cat);
-        BanList.Init(_cat);
-        Whitelist.Init(_cat);
-        Crews.Init(_cat);
-        ModHandshake.Init(_cat);
-        DiscordPresence.Init(_cat);
-        HostSettingsMenu.Init(_cat);
-        DepartedPlayers.InitLeftWith(_cat);
+        _cat = cat;
         _enabled = _cat.CreateEntry("AutoSaveEnabled", true, "Host autosave enabled",
             "As host, periodically run the game's normal save so a crash doesn't lose progress since the last sleep.");
         _minutes = _cat.CreateEntry("AutoSaveMinutes", 5, "Autosave interval (minutes)");
         _playerSaveEnabled = _cat.CreateEntry("PlayerSaveEnabled", true, "Client player saves enabled",
             "As host, save each connected client's money, inventory and position more often than the full autosave.");
         _playerSaveSeconds = _cat.CreateEntry("PlayerSaveSeconds", 30, "Client player save interval (seconds)");
-        GrowSyncFix.Init(_cat);
-        LateJoinFix.Init(_cat);
-        AlwaysHostLobby.Init(_cat);
     }
 
     // --- For the Host settings screen. Values apply on the next check (every 5 s). ---
@@ -94,7 +80,7 @@ public static class AutoSave
             {
                 if (__instance == null || __instance.IsLocalPlayer || !InstanceFinder.IsServer) return;
                 string code = __instance.PlayerCode;
-                if (__instance.PlayerLoaded) { BackUp(code); return; }
+                if (__instance.PlayerLoaded) return;
                 var folder = DepartedPlayers.PlayersFolder();
                 if (folder == null || string.IsNullOrEmpty(code) || code.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0) return;
                 var file = System.IO.Path.Combine(folder, "Player_" + code, "Clothing.json");
@@ -106,8 +92,24 @@ public static class AutoSave
         }
     }
 
-    // Before a player's file is rewritten, keep the last copy of their clothing, appearance and
-    // inventory (the last 10 that differ) in UserData/BiggerLobbies/PlayerBackups/<save>/<id>,
+    // Every write of a player's folder (full save or SavePlayer) goes through Player.WriteData, so
+    // this prefix sees the files as they were before being overwritten.
+    [HarmonyPatch(typeof(Player), nameof(Player.WriteData))]
+    private static class WriteDataBackup
+    {
+        private static void Prefix(Player __instance)
+        {
+            try
+            {
+                if (__instance == null || __instance.IsLocalPlayer || !InstanceFinder.IsServer) return;
+                BackUp(__instance.PlayerCode);
+            }
+            catch (Exception e) { MelonLogger.Warning($"Backup before save failed: {e.Message}"); }
+        }
+    }
+
+    // Before a player's file is rewritten, keep a copy of their clothing, appearance and
+    // inventory when the content differs from the last copy (the newest 10 are kept) in UserData/BiggerLobbies/PlayerBackups/<save>/<id>,
     // so a bad save can be undone by copying the files back into Players/Player_<id>.
     internal static void BackUp(string code, bool force = false)
     {
@@ -119,19 +121,31 @@ public static class AutoSave
             if (!System.IO.Directory.Exists(src)) return;
             string save = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(folder) ?? "");
             var root = System.IO.Path.Combine(MelonLoader.Utils.MelonEnvironment.UserDataDirectory, "BiggerLobbies", "PlayerBackups", save, code);
-            string text = "";
-            foreach (var f in new[] { "Clothing.json", "Appearance.json", "Inventory.json" })
+            // Cheap pre-check on each file's mtime and length; only when that changed is the content hashed.
+            string sig = "";
+            foreach (var f in BackupFiles)
+            {
+                var fi = new System.IO.FileInfo(System.IO.Path.Combine(src, f));
+                if (fi.Exists) sig += f + fi.LastWriteTimeUtc.Ticks + ":" + fi.Length + ";";
+            }
+            if (sig.Length == 0) return;
+            if (!force && _lastBackup.TryGetValue(code, out var last) && last == sig) return;
+            var sha = System.Security.Cryptography.SHA256.Create();
+            var all = new System.Text.StringBuilder();
+            foreach (var f in BackupFiles)
             {
                 var fp = System.IO.Path.Combine(src, f);
-                text += System.IO.File.Exists(fp) ? System.IO.File.ReadAllText(fp) : "";
+                all.Append(f).Append('\n').Append(System.IO.File.Exists(fp) ? System.IO.File.ReadAllText(fp) : "").Append('\n');
             }
-            if (text.Length == 0) return;
-            string hash = ((uint)text.GetHashCode()).ToString("x8");
-            if (!force && _lastBackup.TryGetValue(code, out var last) && last == hash) return;
-            _lastBackup[code] = hash;
+            string hash = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(all.ToString())));
+            if (!force && _lastHash.TryGetValue(code, out var lastHash) && lastHash == hash) return;
+            _lastHash[code] = hash;
             var dest = System.IO.Path.Combine(root, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            // Two backups within one second must not overwrite each other.
+            for (int n = 2; System.IO.Directory.Exists(dest); n++)
+                dest = System.IO.Path.Combine(root, DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + n);
             System.IO.Directory.CreateDirectory(dest);
-            foreach (var f in new[] { "Clothing.json", "Appearance.json", "Inventory.json" })
+            foreach (var f in BackupFiles)
             {
                 var fp = System.IO.Path.Combine(src, f);
                 if (System.IO.File.Exists(fp)) System.IO.File.Copy(fp, System.IO.Path.Combine(dest, f), true);
@@ -139,11 +153,30 @@ public static class AutoSave
             var old = System.IO.Directory.GetDirectories(root);
             Array.Sort(old, StringComparer.Ordinal);
             for (int i = 0; i < old.Length - 10; i++) System.IO.Directory.Delete(old[i], true);
+            _lastBackup[code] = sig;
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't back up {code}'s player files: {e.Message}"); }
     }
 
+    private static readonly string[] BackupFiles = { "Clothing.json", "Appearance.json", "Inventory.json" };
     private static readonly System.Collections.Generic.Dictionary<string, string> _lastBackup = new();
+    private static readonly System.Collections.Generic.Dictionary<string, string> _lastHash = new();
+
+    /// <summary>Writes via a temp file in the same folder, so a crash or full disk never leaves a half-written file.</summary>
+    internal static void WriteAtomic(string path, string text)
+    {
+        var tmp = path + ".tmp";
+        try
+        {
+            System.IO.File.WriteAllText(tmp, text);
+            System.IO.File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            try { System.IO.File.Delete(tmp); } catch { }
+            throw;
+        }
+    }
 
     private static bool Hosting() =>
         SceneManager.GetActiveScene().name == "Main" && InstanceFinder.IsServer;
@@ -181,6 +214,9 @@ public static class AutoSave
         }
     }
 
+    // Identifies the loaded save (folder + creation time) so state from one session never leaks into the next.
+    private static string? _session;
+
     public static void Update()
     {
         float now = UnityEngine.Time.realtimeSinceStartup;
@@ -189,6 +225,22 @@ public static class AutoSave
 
         try
         {
+            var lm = Singleton<LoadManager>.Instance;
+            if (lm == null || !lm.IsGameLoaded || lm.IsLoading)
+            {
+                // Loading or in the menu: forget who was connected so the next session starts clean.
+                _remoteCodes.Clear();
+                _session = null;
+                return;
+            }
+            string session = lm.LoadedGameFolderPath ?? "";
+            try { session += "|" + lm.ActiveSaveInfo?.DateCreated.Ticks; } catch { }
+            if (session != _session)
+            {
+                _session = session;
+                _remoteCodes.Clear();
+                _lastBackup.Clear();
+            }
             if (SceneManager.GetActiveScene().name != "Main") return;
             if (!InstanceFinder.IsServer) return; // host / single player only
 
@@ -287,5 +339,3 @@ public static class AutoSave
         }
     }
 }
-
-#endif

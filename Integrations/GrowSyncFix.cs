@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -72,7 +71,9 @@ public static class GrowSyncFix
     [HarmonyPatch(typeof(Pot), nameof(Pot.OnMinPass))]
     private static class MinPassPatch
     {
-        private static readonly Dictionary<int, int> Ticks = new();
+        private static readonly Dictionary<int, (int Count, float Seen)> Ticks = new();
+        private static float _nextPrune;
+        private const float PruneEvery = 300f;   // real seconds; a live pot reports every in-game minute
 
         private static void Postfix(Pot __instance)
         {
@@ -81,10 +82,20 @@ public static class GrowSyncFix
             if (every <= 0) return;
             try
             {
+                float now = UnityEngine.Time.realtimeSinceStartup;
+                if (now >= _nextPrune)
+                {
+                    // Drop pots that haven't ticked lately (destroyed, or from an earlier save).
+                    _nextPrune = now + PruneEvery;
+                    var stale = new List<int>();
+                    foreach (var kv in Ticks) if (now - kv.Value.Seen > PruneEvery) stale.Add(kv.Key);
+                    foreach (var k in stale) Ticks.Remove(k);
+                }
                 int id = __instance.GetInstanceID();
-                Ticks.TryGetValue(id, out int n);
-                if (++n < every) { Ticks[id] = n; return; }
-                Ticks[id] = (id & 0x7fffffff) % 7; // stagger so pots don't all send on the same minute
+                Ticks.TryGetValue(id, out var t);
+                int n = t.Count + 1;
+                if (n < every) { Ticks[id] = (n, now); return; }
+                Ticks[id] = ((id & 0x7fffffff) % 7, now); // stagger so pots don't all send on the same minute
 
                 PushMoisture(__instance);
                 var plant = __instance.Plant;
@@ -94,5 +105,3 @@ public static class GrowSyncFix
         }
     }
 }
-
-#endif

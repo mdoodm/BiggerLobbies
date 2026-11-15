@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using HarmonyLib;
 using Il2CppFishNet.Connection;
@@ -8,6 +7,7 @@ using Il2CppScheduleOne.Networking;
 using Il2CppScheduleOne.Platform;
 using Il2CppSteamworks;
 using MelonLoader;
+using BiggerLobbies.Utils;
 
 namespace BiggerLobbies.Integrations;
 
@@ -27,15 +27,41 @@ public static class StaleAuthFix
         try
         {
             if (conn == null || auth == null) return true;
-            if (BanList.RejectIfBanned(conn, auth.SteamId)) return false;
-            if (Whitelist.RejectIfNotListed(conn, auth.SteamId)) return false;
-            // On a connection's first login Steam checks the ticket against this ID and a
-            // mismatch disconnects them, so for anyone who gets in it's their real Steam ID.
-            // A reused connection number is a new, unauthenticated connection, so it's replaced.
-            if (!conn.Authenticated && auth.SteamId != 0)
+            ulong claimed = auth.SteamId;
+
+            // The SteamId in the broadcast is only the client's claim until Steam has checked
+            // the ticket against it. The transport already knows who this connection really is
+            // (FishySteamworks, via Steam networking), so use that: a claim for someone else's
+            // ID is dropped with no side effect on that someone (no ban/whitelist notice, no
+            // unhide, no login record, no ended auth session).
+            bool confirmed = SteamIdentity.TryGetVerified(conn, out ulong verified);
+            if (confirmed && verified != claimed)
             {
-                BanList.RecordLogin(conn.ClientId, auth.SteamId);
-                KickNotice.Unhide(auth.SteamId);   // let in again after a kick or a whitelist refusal: show them
+                MelonLogger.Warning($"Connection {conn.ClientId} claimed Steam ID {claimed} but is {verified}; disconnecting");
+                try { conn.Disconnect(true); } catch { }
+                return false;
+            }
+            // Transport can't tell (local connection, other transport): an already
+            // authenticated connection that repeats its recorded ID is still confirmed.
+            if (!confirmed && conn.Authenticated)
+            {
+                ulong known0 = BanList.VerifiedSteamId(conn.ClientId);
+                confirmed = known0 != 0 && known0 == claimed;
+            }
+
+            bool isHost = conn.IsLocalClient || (claimed != 0 && claimed == BanList.HostSteamId());
+            if (!isHost && BanList.RejectIfBanned(conn, claimed, confirmed)) return false;
+            if (Whitelist.RejectIfNotListed(conn, claimed, confirmed)) return false;
+            // A reused connection number is a new, unauthenticated connection, so it's replaced.
+            // Only a confirmed ID is recorded or unhidden; an unconfirmed one is Steam-checked
+            // by vanilla right after this and a mismatch disconnects it.
+            if (!conn.Authenticated && claimed != 0)
+            {
+                // Only a transport-verified ID is recorded (an unconfirmed claim must never seed the
+                // re-authentication path below); the host's own local connection is recorded explicitly.
+                if (confirmed) BanList.RecordLogin(conn.ClientId, claimed);
+                else if (conn.IsLocalClient && claimed == BanList.HostSteamId()) BanList.RecordLogin(conn.ClientId, claimed);
+                if (confirmed) KickNotice.Unhide(claimed);   // let in again after a kick or a whitelist refusal: show them
             }
 
             // A client that starts its join twice (e.g. Steam "Join Game" plus the lobby's
@@ -54,6 +80,7 @@ public static class StaleAuthFix
                     try { conn.Disconnect(true); } catch { }
                     return false;
                 }
+                if (!confirmed) return true;   // can't tell whose session this is: leave it, vanilla disconnects
                 PlatformAuth.EndAuthSession(new CSteamID(rid));
                 var result = PlatformAuth.BeginAuthSession(auth);
                 if (result != EBeginAuthSessionResult.k_EBeginAuthSessionResultOK)
@@ -66,8 +93,8 @@ public static class StaleAuthFix
                 return false;
             }
 
-            ulong id = auth.SteamId;
-            if (id == 0) return true;
+            ulong id = claimed;
+            if (id == 0 || !confirmed) return true;   // never end a session for an ID that isn't confirmed
             PlatformAuth.EndAuthSession(new CSteamID(id));
             Utils.Log.Info($"Cleared any old Steam auth session for {id} before authenticating connection {conn.ClientId}");
         }
@@ -88,5 +115,3 @@ public static class StaleAuthFix
         catch (Exception e) { MelonLogger.Warning($"Couldn't clear a closed connection's login: {e.Message}"); }
     }
 }
-
-#endif

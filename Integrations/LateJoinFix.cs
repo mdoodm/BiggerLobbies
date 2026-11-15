@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections;
 using HarmonyLib;
@@ -65,7 +64,9 @@ public static class LateJoinFix
             if (!svc.IsHost || !svc.IsInLobby) yield break;
             // With 4 or fewer members the vanilla client joins by itself from lobby data;
             // an extra "ready" would make it load twice and fail authentication.
-            int members = SteamMatchmaking.GetNumLobbyMembers(svc._lobbySteamID);
+            // The service's own count, not Steam's: it leaves out members the mod hides after a
+            // kick or ban, who would otherwise push the count over the limit.
+            int members = svc.PlayerCount;
             if (members <= BiggerLobbies.Utils.Constants.VANILLA_LIMIT)
             {
                 Utils.Log.Info($"Player joined mid-game ({members} in lobby); the game connects them itself");
@@ -79,5 +80,3 @@ public static class LateJoinFix
         catch (Exception e) { MelonLogger.Error($"Late join 'ready' re-send failed: {e}"); }
     }
 }
-
-#endif

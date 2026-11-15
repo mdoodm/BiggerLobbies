@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using HarmonyLib;
 using Il2CppScheduleOne.Networking;
@@ -18,10 +17,12 @@ public static class LobbyDedupePatches
 {
     private static float _pendingSince = -1f;          // Time.realtimeSinceStartup of the pending create
     private const float PendingTimeout = 15f;
+    private static float _inviteArmedAt;                // when the deferred invite was requested
     private static bool _openInviteWhenReady;
     private static SteamLobbyService? _service;
 
-    private static void Log(string s) => Utils.Log.Info($"[diag] {s}");
+    // Takes a lambda so the message is only built when the diagnostic log is on.
+    private static void Log(Func<string> s) { if (Utils.Log.Verbose) Utils.Log.Info($"[diag] {s()}"); }
 
     private static bool CreatePending =>
         _pendingSince >= 0f && Time.realtimeSinceStartup - _pendingSince < PendingTimeout;
@@ -39,30 +40,37 @@ public static class LobbyDedupePatches
     {
         if (CreatePending || ServiceInLobby())
         {
-            Log($"Steam.CreateLobby BLOCKED duplicate (pending={CreatePending} inLobby={ServiceInLobby()})");
+            Log(() => $"Steam.CreateLobby BLOCKED duplicate (pending={CreatePending} inLobby={ServiceInLobby()})");
             __result = SteamAPICall_t.Invalid;
             return false;
         }
         _pendingSince = Time.realtimeSinceStartup;
-        Log($"Steam.CreateLobby type={eLobbyType} max={cMaxMembers}");
+        Log(() => $"Steam.CreateLobby type={eLobbyType} max={cMaxMembers}");
         return true;
     }
 
     [HarmonyPostfix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyCreated))]
-    private static void Svc_OnLobbyCreated_Postfix() => _pendingSince = -1f;
+    private static void Svc_OnLobbyCreated_Postfix(LobbyCreated_t result)
+    {
+        _pendingSince = -1f;
+        // A failed create must not leave the deferred invite armed for the next lobby we enter.
+        if (result.m_eResult != EResult.k_EResultOK) _openInviteWhenReady = false;
+    }
 
     [HarmonyPrefix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OpenInviteUI))]
     private static bool Svc_OpenInviteUI_Prefix(SteamLobbyService __instance)
     {
         _service = __instance;
         bool inLobby = __instance.IsInLobby;
-        Log($"Svc.OpenInviteUI inLobby={inLobby} pending={CreatePending}");
+        Log(() => $"Svc.OpenInviteUI inLobby={inLobby} pending={CreatePending}");
         if (inLobby) return true; // normal path
 
         // Not in a lobby yet: create one (once) and open the overlay when we've entered it.
         _openInviteWhenReady = true;
+        _inviteArmedAt = Time.realtimeSinceStartup;
         if (!CreatePending)
         {
+            AlwaysHostLobby.CancelAbandon();
             try { __instance.CreateLobby(LobbySize.MaxPlayers); }
             catch (Exception e) { MelonLogger.Error($"CreateLobby from OpenInviteUI failed: {e}"); }
         }
@@ -75,9 +83,11 @@ public static class LobbyDedupePatches
         _pendingSince = -1f;
         if (!_openInviteWhenReady) return;
         _openInviteWhenReady = false;
+        // Only for a lobby we own, and only if the request is still fresh.
+        if (!__instance.IsHost || Time.realtimeSinceStartup - _inviteArmedAt > PendingTimeout) return;
         try
         {
-            Log($"Opening deferred invite overlay for lobby {__instance._lobbySteamID.m_SteamID}");
+            Log(() => $"Opening deferred invite overlay for lobby {__instance._lobbySteamID.m_SteamID}");
             __instance.OpenInviteUI();
         }
         catch (Exception e) { MelonLogger.Error($"Deferred OpenInviteUI failed: {e}"); }
@@ -85,13 +95,15 @@ public static class LobbyDedupePatches
 
     // Extra logging of the raw Steam calls.
     [HarmonyPrefix, HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.JoinLobby))]
-    private static void Steam_JoinLobby(CSteamID steamIDLobby) => Log($"Steam.JoinLobby {steamIDLobby.m_SteamID}");
+    private static void Steam_JoinLobby(CSteamID steamIDLobby) => Log(() => $"Steam.JoinLobby {steamIDLobby.m_SteamID}");
 
     [HarmonyPrefix, HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.LeaveLobby))]
-    private static void Steam_LeaveLobby(CSteamID steamIDLobby) => Log($"Steam.LeaveLobby {steamIDLobby.m_SteamID}");
+    private static void Steam_LeaveLobby(CSteamID steamIDLobby)
+    {
+        _openInviteWhenReady = false;
+        Log(() => $"Steam.LeaveLobby {steamIDLobby.m_SteamID}");
+    }
 
     [HarmonyPrefix, HarmonyPatch(typeof(SteamFriends), nameof(SteamFriends.ActivateGameOverlayInviteDialog))]
-    private static void Steam_InviteDialog(CSteamID steamIDLobby) => Log($"Steam.ActivateGameOverlayInviteDialog {steamIDLobby.m_SteamID}");
+    private static void Steam_InviteDialog(CSteamID steamIDLobby) => Log(() => $"Steam.ActivateGameOverlayInviteDialog {steamIDLobby.m_SteamID}");
 }
-
-#endif

@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using HarmonyLib;
 using Il2CppSteamworks;
@@ -67,6 +66,8 @@ public static class LobbyPrivacy
     private static bool IsLocalPlayerFriendsWith_Prefix(ref bool __result)
     {
         if (Current != Mode.Open) return true;
+        // Only the host's server runs the kick check; a client calling this must get the real answer.
+        try { if (!Il2CppFishNet.InstanceFinder.IsServer) return true; } catch { return true; }
         __result = true;
         return false;
     }
@@ -84,5 +85,3 @@ public static class LobbyPrivacy
         return ok ? $"Privacy is now {Label(m)}" : $"Steam refused the change. It applies when you next host.";
     }
 }
-
-#endif

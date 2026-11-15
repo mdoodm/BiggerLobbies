@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -64,12 +63,39 @@ public static class ModHandshake
     private static bool Ignored(string name)
     {
         if (IgnoredBuiltIn.Any(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase))) return true;
-        if (name.Contains("Hud") || name.Contains("HUD")) return true;   // HUD mods only change one player's screen
+        if (name.IndexOf("hud", StringComparison.OrdinalIgnoreCase) >= 0) return true;   // HUD mods only change one player's screen
         var extra = _ignored?.Value ?? "";
         return extra.Split(',').Any(n => n.Trim().Length > 0 && string.Equals(n.Trim(), name, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string Clean(string? s) => (s ?? "").Replace("|", "").Replace(',', ' ').Trim();
+
+    // Text from another player's game ends up in logs and the Host settings UI: no control
+    // characters, bounded length.
+    private static string Sanitize(string? s, int max)
+    {
+        var sb = new StringBuilder();
+        foreach (char c in s ?? "") if (!char.IsControl(c) && c != '<' && c != '>') sb.Append(c);
+        var r = sb.ToString().Trim();
+        return r.Length > max ? r.Substring(0, max) : r;
+    }
+
+    private const int MaxModsPerHello = 200;
+
+    // Forget a member's hello when they leave, so the dictionaries don't grow all session.
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.PlayerEnterOrLeave))]
+    private static void PlayerEnterOrLeave_Prefix(LobbyChatUpdate_t result)
+    {
+        try
+        {
+            const uint gone = 0x2 | 0x4 | 0x8 | 0x10;   // left, disconnected, kicked, banned
+            if ((result.m_rgfChatMemberStateChange & gone) == 0) return;
+            _hellos.Remove(result.m_ulSteamIDUserChanged);
+            _warned.Remove(result.m_ulSteamIDUserChanged);
+        }
+        catch { }
+    }
 
     // Every loaded MelonLoader mod except this one, cleaned for the chat line.
     private static List<string> MyMods()
@@ -134,6 +160,7 @@ public static class ModHandshake
             var buf = new Il2CppStructArray<byte>(4096);
             int n = SteamMatchmaking.GetLobbyChatEntry(lobby, (int)result.m_iChatID, out _, buf, buf.Length, out _);
             if (n <= Prefix.Length) return;
+            if (n > buf.Length) n = buf.Length;
             var bytes = new byte[n];
             for (int i = 0; i < n; i++) bytes[i] = buf[i];
             string msg = Encoding.UTF8.GetString(bytes).TrimEnd('\0');
@@ -144,10 +171,13 @@ public static class ModHandshake
             // Steam vouches for the sender; the ID in the line is only checked against it.
             if (ulong.TryParse(parts[0], out ulong said) && said != from) return;
 
-            var hello = new Hello { Version = parts[1].Trim() };
+            var hello = new Hello { Version = Sanitize(parts[1], 32) };
             if (parts.Length >= 3)
                 foreach (var m in parts[2].Split(','))
-                    if (m.Trim().Length > 0) hello.Mods.Add(m.Trim());
+                {
+                    var name = Sanitize(m, 64);
+                    if (name.Length > 0 && hello.Mods.Count < MaxModsPerHello) hello.Mods.Add(name);
+                }
             Compare(hello);
             _hellos[from] = hello;
             Utils.Log.Info($"Hello from {DepartedPlayers.NameOf(from)} ({from}): version {hello.Version}, {hello.Mods.Count} other mod(s)"
@@ -175,5 +205,3 @@ public static class ModHandshake
         return false;
     }
 }
-
-#endif

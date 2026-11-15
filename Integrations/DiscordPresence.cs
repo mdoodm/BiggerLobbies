@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -63,7 +62,7 @@ public static class DiscordPresence
     private static float _nextPoll;
     private static long _sessionStart;      // unix seconds, set when a save finishes loading
     private static bool _wasLoaded;
-    private static Thread? _thread;
+    private static volatile Thread? _thread;
     private static volatile string? _wanted;            // activity JSON, or null to clear
     private static volatile bool _connected;
     private static volatile bool _stop;
@@ -74,7 +73,8 @@ public static class DiscordPresence
         {
             if (!Enabled)
             {
-                if (_thread != null) { _wanted = null; }
+                // Turned off: let the worker clear our activity and exit instead of idling forever.
+                if (_thread != null) { _wanted = null; _stop = true; }
                 return;
             }
             if (_thread == null)
@@ -198,6 +198,8 @@ public static class DiscordPresence
     private const int RetryGap = 30_000;       // ms between connection attempts
 
     private static bool _warnedOnce;
+    private static int _failures;          // consecutive failed connects, for backoff
+    private const int ReadTimeout = 5_000; // ms for a whole frame part; Discord answers at once or not at all
 
     private static void Worker()
     {
@@ -211,8 +213,9 @@ public static class DiscordPresence
                 if (pipe == null)
                 {
                     _connected = false;
-                    if (!_warnedOnce) { _warnedOnce = true; Utils.Log.Info("Discord presence: Discord isn't running; will keep trying"); }
-                    Sleep(RetryGap);
+                    if (!_warnedOnce) { _warnedOnce = true; Utils.Log.Info("Discord presence: couldn't reach Discord (not running, or not visible to this game: the pipe is Windows-only, so under Proton/Linux it needs an IPC bridge); retrying quietly with a longer wait each time"); }
+                    _failures++;
+                    Sleep(Math.Min(RetryGap << Math.Min(_failures - 1, 3), 5 * 60_000));
                     continue;
                 }
 
@@ -229,6 +232,7 @@ public static class DiscordPresence
                 }
                 _connected = true;
                 _warnedOnce = false;
+                _failures = 0;
                 Utils.Log.Info("Discord presence connected");
                 sent = null; _headTask = null;
                 long lastSend = 0;
@@ -299,7 +303,7 @@ public static class DiscordPresence
         pipe.Flush();
     }
 
-    // Reads one frame. Blocks, so only used for the handshake reply.
+    // Reads one frame, giving up after ReadTimeout per part. Used for the handshake reply.
     private static string? Read(NamedPipeClientStream pipe, out int op)
     {
         op = -1;
@@ -352,14 +356,17 @@ public static class DiscordPresence
     private static bool ReadFully(Stream s, byte[] buf, int n, int offset)
     {
         int got = 0;
+        var clock = Stopwatch.StartNew();
         while (got < n)
         {
-            int r = s.Read(buf, offset + got, n - got);
+            // A plain Read would block for good if Discord never answers; wait on the async read instead.
+            var task = s.ReadAsync(buf, offset + got, n - got);
+            int left = ReadTimeout - (int)clock.ElapsedMilliseconds;
+            if (left <= 0 || !task.Wait(left)) return false;
+            int r = task.Result;
             if (r <= 0) return false;
             got += r;
         }
         return true;
     }
 }
-
-#endif

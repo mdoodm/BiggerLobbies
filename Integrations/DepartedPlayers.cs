@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -66,6 +65,42 @@ public static partial class DepartedPlayers
         catch { return ""; }
     }
 
+    private static long CreatedTicks()
+    {
+        // Whole seconds: the save file stores DateCreated that way, so a new game's first
+        // session (sub-second ticks) and later loads agree.
+        try
+        {
+            long t = Singleton<LoadManager>.Instance?.ActiveSaveInfo?.DateCreated.Ticks ?? 0;
+            return t - t % TimeSpan.TicksPerSecond;
+        }
+        catch { return 0; }
+    }
+
+    // What records are filed under: the save folder name plus when the save was created, so a
+    // reused slot (delete a save, start a new one in the same folder) doesn't inherit old records.
+    private static string SaveKey()
+    {
+        long t = CreatedTicks();
+        return t > 0 ? SaveName() + "_" + t : SaveName();
+    }
+
+    // Does a record belong to the loaded save? Older records are filed under the folder name
+    // alone; those count if they were made after this save was created.
+    private static bool InThisSave(string recSave, DateTime utc)
+    {
+        if (recSave == SaveKey()) return true;
+        string name = SaveName();
+        long t = CreatedTicks();
+        // Tolerate a few seconds of drift in the stored creation time.
+        if (t > 0 && recSave.StartsWith(name + "_", StringComparison.Ordinal)
+            && long.TryParse(recSave.Substring(name.Length + 1), out long n)
+            && Math.Abs(n - t) <= 5 * TimeSpan.TicksPerSecond) return true;
+        if (recSave != name) return false;
+        if (t <= 0) return true;
+        return utc >= new DateTime(t, DateTimeKind.Local).ToUniversalTime() - TimeSpan.FromHours(14);
+    }
+
     private static string TakenDir => Path.Combine(MelonEnvironment.UserDataDirectory, "BiggerLobbies", "Taken");
 
     // --- Names ---------------------------------------------------------------------------
@@ -122,7 +157,7 @@ public static partial class DepartedPlayers
             }
             if (!changed) return;
             Directory.CreateDirectory(Path.GetDirectoryName(NamesFile)!);
-            File.WriteAllLines(NamesFile, names.Select(kv => kv.Key + "\t" + kv.Value));
+            AutoSave.WriteAtomic(NamesFile, string.Join("\n", names.Select(kv => kv.Key + "\t" + kv.Value)) + "\n");
         }
         catch (Exception e)
         {
@@ -180,7 +215,7 @@ public static partial class DepartedPlayers
     {
         try
         {
-            var line = string.Join("\t", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture), Tsv(SaveName()), id.ToString(), Tsv(name), Tsv(summary), Tsv(record));
+            var line = string.Join("\t", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture), Tsv(SaveKey()), id.ToString(), Tsv(name), Tsv(summary), Tsv(record));
             File.AppendAllText(LogFile, line + "\n");
             _log = null;
         }
@@ -209,8 +244,7 @@ public static partial class DepartedPlayers
                     _log.Add(e);
                 }
             }
-            string save = SaveName();
-            return _log.Where(e => e.Save == save).OrderByDescending(e => e.Utc).Take(max).ToList();
+            return _log.Where(e => InThisSave(e.Save, e.Utc)).OrderByDescending(e => e.Utc).Take(max).ToList();
         }
         catch { return new List<Taken>(); }
     }
@@ -242,7 +276,7 @@ public static partial class DepartedPlayers
         sb.Append("  \"cash\": ").Append(MiniJson.Number(r.Cash)).Append(",\n");
         sb.Append("  \"cashReturned\": ").Append(MiniJson.Number(r.CashReturned)).Append('\n');
         sb.Append("}\n");
-        File.WriteAllText(r.Path, sb.ToString());
+        AutoSave.WriteAtomic(r.Path, sb.ToString());
     }
 
     private static TakeRecord? ReadRecord(string path)
@@ -316,6 +350,17 @@ public static partial class DepartedPlayers
     private static bool IsHere(ulong id, HashSet<string>? online = null) =>
         (online ?? OnlineCodes()).Contains(id.ToString()) || BanList.IsConnected(id);
 
+    // Per player: the result of reading and comparing their files, reused while the files (and
+    // every take since) are unchanged. A null Info means they had nothing to show.
+    private static readonly Dictionary<string, (string Sig, Info? Info)> _infoCache = new();
+    private static int _takeVersion;
+
+    private static string FileSig(string path)
+    {
+        try { var fi = new FileInfo(path); return fi.Exists ? fi.LastWriteTimeUtc.Ticks + ":" + fi.Length : "-"; }
+        catch { return "-"; }
+    }
+
     /// <summary>Saved players who aren't connected and are carrying items, most recent first.</summary>
     public static List<Info> List()
     {
@@ -335,12 +380,20 @@ public static partial class DepartedPlayers
                 if (IsHere(id, online) || id == BanList.HostSteamId()) continue;
                 var file = Path.Combine(dir, "Inventory.json");
                 if (!File.Exists(file)) continue;
+
+                string sig = FileSig(file) + "|" + FileSig(Path.Combine(dir, "Clothing.json")) + "|" + FileSig(LeftPath(id) ?? "") + "|" + _takeVersion;
+                if (_infoCache.TryGetValue(dir, out var hit) && hit.Sig == sig)
+                {
+                    if (hit.Info != null) { hit.Info.Name = NameOf(id); result.Add(hit.Info); }
+                    continue;
+                }
+
                 var text = File.ReadAllText(file);
                 var slots = ReadItems(text, out var lits, out _);
                 float cash = CashOf(lits, out _);
                 var cmp = Compare(id);
-                if (slots.Count == 0 && cash < 0.01f && (cmp == null || cmp.Matches)) continue;
-                result.Add(new Info
+                if (slots.Count == 0 && cash < 0.01f && (cmp == null || cmp.Matches)) { _infoCache[dir] = (sig, null); continue; }
+                var info = new Info
                 {
                     SteamId = id,
                     Name = NameOf(id),
@@ -349,7 +402,9 @@ public static partial class DepartedPlayers
                     Items = slots,
                     Cash = cash,
                     Compare = cmp,
-                });
+                };
+                _infoCache[dir] = (sig, info);
+                result.Add(info);
             }
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't read saved players: {e.Message}"); }
@@ -357,7 +412,7 @@ public static partial class DepartedPlayers
         return _cache;
     }
 
-    public static void Invalidate() => _cacheUntil = 0;
+    public static void Invalidate() { _cacheUntil = 0; _takeVersion++; }
 
     // --- Inventory.json: {"Items":["<json>", ...], "SlotFilters":[...]} ---------------------
 
@@ -498,36 +553,69 @@ public static partial class DepartedPlayers
             File.Copy(file, Path.Combine(TakenDir, backup), true);
 
             string name = NameOf(steamId);
-            var record = new TakeRecord { Save = SaveName(), SteamId = steamId, Name = name, Utc = DateTime.UtcNow, Backup = backup };
+            var record = new TakeRecord { Save = SaveKey(), SteamId = steamId, Name = name, Utc = DateTime.UtcNow, Backup = backup };
             var replace = new Dictionary<int, string>();
             var taken = new List<string>();
             int left = 0;
             string empty = MiniJson.Quote(EmptySlot(literals[0].Value));
+            var wanted = new Dictionary<string, int>();
+            var before = new Dictionary<string, uint>();
+            bool writeFailed = false;
+
+            // One stack at a time: check it fits, strip it from their file, then add it. The next
+            // stack is checked against the inventory as it is by then, so a partly full inventory
+            // never ends up with a stack removed from the file but not added.
             foreach (var s in slots)
             {
+                if (writeFailed) { left++; continue; }
                 ItemInstance? item = null;
                 try { item = ItemDeserializer.LoadItem(s.Json); } catch { }
                 if (item == null) { left++; continue; }
                 int qty = Math.Max(1, s.Quantity);
-                if (!inv.CanItemFitInInventory(item, qty)) { left++; continue; }
-                inv.AddItemToInventory(item);
+                bool fits;
+                try { fits = inv.CanItemFitInInventory(item, qty); }
+                catch (Exception e) { MelonLogger.Warning($"Couldn't check whether {s.Id} fits: {e.Message}"); fits = false; }
+                if (!fits) { left++; continue; }
+
                 replace[s.Index] = empty;
+                try { AutoSave.WriteAtomic(file, Splice(text, literals, replace)); }
+                catch (Exception e)
+                {
+                    replace.Remove(s.Index);
+                    writeFailed = true;
+                    left++;
+                    MelonLogger.Warning($"Couldn't update {name}'s file, so the take stopped (nothing more was moved): {e.Message}");
+                    continue;
+                }
+                if (!before.ContainsKey(s.Id)) { try { before[s.Id] = inv.GetAmountOfItem(s.Id); } catch { before[s.Id] = 0; } }
+                wanted[s.Id] = (wanted.TryGetValue(s.Id, out var w) ? w : 0) + qty;
+                try { inv.AddItemToInventory(item); }
+                catch (Exception e) { MelonLogger.Warning($"Couldn't add {qty}x {s.Id} to your inventory (the original file is in UserData/BiggerLobbies/Taken): {e.Message}"); }
                 taken.Add($"{qty}x {SafeName(item, s.Id)}");
                 record.Slots.Add(new TakenSlot { Index = s.Index, Literal = s.Json, Id = s.Id, Quantity = qty });
             }
 
-            // Cash on hand always fits.
-            if (cash >= 0.01f && cashIndex >= 0 && inv.cashInstance != null)
+            // Cash on hand always fits. Their file first, then the balance.
+            float cashTaken = 0;
+            if (!writeFailed && cash >= 0.01f && cashIndex >= 0 && inv.cashInstance != null)
             {
-                inv.cashInstance.ChangeBalance(cash);
                 replace[cashIndex] = MiniJson.Quote(CashRx.Replace(literals[cashIndex].Value, "\"CashBalance\":0.0", 1));
-                taken.Add($"${cash:N0} cash");
-                record.Cash = cash;
+                try
+                {
+                    AutoSave.WriteAtomic(file, Splice(text, literals, replace));
+                    taken.Add($"${cash:N0} cash");
+                    record.Cash = cash;
+                    cashTaken = cash;
+                }
+                catch (Exception e)
+                {
+                    replace.Remove(cashIndex);
+                    MelonLogger.Warning($"Couldn't update {name}'s file, so their cash was left: {e.Message}");
+                }
             }
 
-            if (replace.Count > 0)
+            if (taken.Count > 0)
             {
-                File.WriteAllText(file, Splice(text, literals, replace));
                 string recordFile = "";
                 try
                 {
@@ -541,11 +629,15 @@ public static partial class DepartedPlayers
                     recordFile = "";
                     MelonLogger.Warning($"Couldn't write the take record, so this take can't be given back: {e.Message}");
                 }
+
+                if (cashTaken >= 0.01f) inv.cashInstance!.ChangeBalance(cashTaken);
+                if (wanted.Count > 0) MelonCoroutines.Start(VerifyTake(name, inv, wanted, before));
+
                 Utils.Log.Info($"Took from {name} ({steamId}): {string.Join(", ", taken)}. Their original inventory is saved in UserData/BiggerLobbies/Taken");
                 AppendLog(steamId, name, string.Join(", ", taken), recordFile);
             }
             Invalidate();
-            if (replace.Count == 0) return "Your inventory is full. Make room and try again";
+            if (taken.Count == 0) return writeFailed ? "Couldn't update their file. See the log" : "Your inventory is full. Make room and try again";
             return left > 0
                 ? $"Took {string.Join(", ", taken)} from {name}. {left} stack{(left == 1 ? "" : "s")} left: make room to take the rest"
                 : $"Took everything from {name}: {string.Join(", ", taken)}";
@@ -555,6 +647,24 @@ public static partial class DepartedPlayers
             MelonLogger.Error($"Take items failed: {e}");
             return "Couldn't take the items. See the log";
         }
+    }
+
+    // The game can apply an inventory change a moment after it's asked for: check a little later
+    // that what was taken really arrived, and say so in the log if not.
+    private static IEnumerator VerifyTake(string name, PlayerInventory inv, Dictionary<string, int> wanted, Dictionary<string, uint> before)
+    {
+        yield return new UnityEngine.WaitForSecondsRealtime(0.5f);
+        try
+        {
+            foreach (var kv in wanted)
+            {
+                uint now = inv.GetAmountOfItem(kv.Key);
+                long got = (long)now - before[kv.Key];
+                if (got < kv.Value)
+                    MelonLogger.Warning($"Took {kv.Value}x {kv.Key} from {name} but your inventory only gained {Math.Max(0, got)}. Some may be missing: the original file is in UserData/BiggerLobbies/Taken");
+            }
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't verify the take from {name}: {e.Message}"); }
     }
 
     // --- Give back -------------------------------------------------------------------------
@@ -640,7 +750,7 @@ public static partial class DepartedPlayers
             var rec = ReadRecord(t.Record.Path);   // fresh from disk: the latest returned counts
             if (rec == null) return "Couldn't read what was taken. See the log";
             string name = NameOf(rec.SteamId);
-            if (rec.Save != SaveName()) return "That take is from a different save";
+            if (!InThisSave(rec.Save, rec.Utc)) return "That take is from a different save";
             if (IsHere(rec.SteamId)) return $"{name} is in the game. Items can only be given back while they're away";
             if (rec.AllReturned) return "Nothing left to give back";
             var folder = PlayersFolder();
@@ -839,7 +949,7 @@ public static partial class DepartedPlayers
         // Copy of their file as it is now, then the change, then the record.
         Directory.CreateDirectory(TakenDir);
         File.Copy(file, Path.Combine(TakenDir, $"{rec.SteamId}_{Stamp()}_BeforeGiveBack_Inventory.json"), true);
-        File.WriteAllText(file, Splice(text, literals, replace));
+        AutoSave.WriteAtomic(file, Splice(text, literals, replace));
         WriteRecord(rec);
 
         string what = string.Join(", ", given);
@@ -870,5 +980,3 @@ public static partial class DepartedPlayers
         try { return item?.Icon; } catch { return null; }
     }
 }
-
-#endif

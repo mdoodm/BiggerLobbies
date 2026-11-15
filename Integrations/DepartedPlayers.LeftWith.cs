@@ -1,9 +1,9 @@
-#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using BiggerLobbies.Utils;
 using HarmonyLib;
@@ -70,6 +70,43 @@ public static partial class DepartedPlayers
 
     private static string LeftDir(string save) => Path.Combine(MelonEnvironment.UserDataDirectory, "BiggerLobbies", "LeftWith", save);
 
+    // Where this player's record is: filed under the save key, else (older records) the bare folder name.
+    private static string? LeftPath(ulong id)
+    {
+        var path = Path.Combine(LeftDir(SaveKey()), id + ".json");
+        if (File.Exists(path)) return path;
+        path = Path.Combine(LeftDir(SaveName()), id + ".json");
+        return File.Exists(path) ? path : null;
+    }
+
+    // Records only matter for as long as the player might come back, and takes must outlive the
+    // left-with records they apply to (dropping a take would make the restore bring the items back).
+    private static bool _pruned;
+
+    private static void PruneOld()
+    {
+        PruneDir(Path.Combine(MelonEnvironment.UserDataDirectory, "BiggerLobbies", "LeftWith"), TimeSpan.FromDays(30), 300);
+        PruneDir(TakenDir, TimeSpan.FromDays(60), 1500);
+    }
+
+    private static void PruneDir(string dir, TimeSpan maxAge, int maxFiles)
+    {
+        try
+        {
+            if (!Directory.Exists(dir)) return;
+            var files = new DirectoryInfo(dir).GetFiles("*.json", SearchOption.AllDirectories).OrderByDescending(f => f.LastWriteTimeUtc).ToList();
+            var cutoff = DateTime.UtcNow - maxAge;
+            int removed = 0;
+            for (int i = 0; i < files.Count; i++)
+            {
+                if (i < maxFiles && files[i].LastWriteTimeUtc >= cutoff) continue;
+                try { files[i].Delete(); removed++; } catch { }
+            }
+            if (removed > 0) { Utils.Log.Info($"Removed {removed} old record(s) from {Path.GetFileName(dir)}"); Invalidate(); }
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't clean up old records in {dir}: {e.Message}"); }
+    }
+
     private static bool SafeCode(string code) => code.Length > 0 && code.All(char.IsDigit) && code != "0";
 
     // --- Who's here: player codes only, every 2 s. Nothing is serialized or written. ---------
@@ -89,6 +126,7 @@ public static partial class DepartedPlayers
                 _inMain = false;
                 return;
             }
+            if (!_inMain && !_pruned) { _pruned = true; PruneOld(); }
             _inMain = true;
 
             var list = Player.PlayerList;
@@ -114,7 +152,7 @@ public static partial class DepartedPlayers
                 // Back and loaded: what they left with last time has been used.
                 _seen[kv.Key] = kv.Value;
                 _pending.RemoveAll(x => x.Id.ToString() == kv.Key);
-                try { var f = Path.Combine(LeftDir(SaveName()), kv.Key + ".json"); if (File.Exists(f)) File.Delete(f); } catch { }
+                try { foreach (var dir in new[] { LeftDir(SaveKey()), LeftDir(SaveName()) }) { var f = Path.Combine(dir, kv.Key + ".json"); if (File.Exists(f)) File.Delete(f); } } catch { }
             }
 
             foreach (var code in _seen.Keys.ToList())
@@ -151,7 +189,7 @@ public static partial class DepartedPlayers
             var dir = Path.Combine(folder, "Player_" + pd.Id);
             var invFile = Path.Combine(dir, "Inventory.json");
             if (!File.Exists(invFile)) return;
-            var rec = new LeftRecord { Save = SaveName(), SteamId = pd.Id, Name = pd.Name, Utc = pd.Utc };
+            var rec = new LeftRecord { Save = SaveKey(), SteamId = pd.Id, Name = pd.Name, Utc = pd.Utc };
             // Already taken from: their file has changed, so use the take's copy from before it.
             var first = TakesSince(rec).FirstOrDefault();
             var before = first != null && first.Backup.Length > 0 ? Path.Combine(TakenDir, Path.GetFileName(first.Backup)) : "";
@@ -180,15 +218,15 @@ public static partial class DepartedPlayers
         sb.Append("  \"inventory\": ").Append(MiniJson.Quote(r.Inventory)).Append(",\n");
         sb.Append("  \"clothing\": ").Append(MiniJson.Quote(r.Clothing)).Append('\n');
         sb.Append("}\n");
-        File.WriteAllText(r.Path, sb.ToString());
+        AutoSave.WriteAtomic(r.Path, sb.ToString());
     }
 
     private static LeftRecord? ReadLeft(ulong id)
     {
         try
         {
-            var path = Path.Combine(LeftDir(SaveName()), id + ".json");
-            if (!File.Exists(path)) return null;
+            var path = LeftPath(id);
+            if (path == null) return null;
             if (MiniJson.Parse(File.ReadAllText(path)) is not Dictionary<string, object?> o) return null;
             if (MiniJson.Str(o, "steamId") != id.ToString()) return null;
             DateTime.TryParse(MiniJson.Str(o, "utc"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var utc);
@@ -197,7 +235,7 @@ public static partial class DepartedPlayers
                 Path = path, Save = MiniJson.Str(o, "save"), SteamId = id, Name = MiniJson.Str(o, "name"),
                 Utc = utc.ToUniversalTime(), Inventory = MiniJson.Str(o, "inventory"), Clothing = MiniJson.Str(o, "clothing"),
             };
-            return r.Inventory.Length == 0 ? null : r;
+            return r.Inventory.Length == 0 || !InThisSave(r.Save, r.Utc) ? null : r;
         }
         catch (Exception e)
         {
@@ -216,7 +254,7 @@ public static partial class DepartedPlayers
             foreach (var f in Directory.GetFiles(TakenDir, rec.SteamId + "_*.take.json"))
             {
                 var t = ReadRecord(f);
-                if (t != null && t.SteamId == rec.SteamId && t.Save == rec.Save && t.Utc > rec.Utc) list.Add(t);
+                if (t != null && t.SteamId == rec.SteamId && InThisSave(t.Save, t.Utc) && t.Utc > rec.Utc) list.Add(t);
             }
         }
         catch { }
@@ -361,15 +399,36 @@ public static partial class DepartedPlayers
     // --- Putting it back on rejoin -----------------------------------------------------------
 
     // Runs on the host just before the game reads a joining player's files.
-    [HarmonyPatch(typeof(Player), nameof(Player.RpcLogic___RequestPlayerData_Server_310431262))]
+    // The method name ends in a hash that changes between game versions, so it's found by prefix.
+    [HarmonyPatch]
     private static class RequestPlayerDataPatch
     {
-        private static void Prefix(string playerCode, bool isHost)
+        private static MethodBase? Find() => AccessTools.GetDeclaredMethods(typeof(Player))
+            .FirstOrDefault(m => m.Name.StartsWith("RpcLogic___RequestPlayerData_Server_", StringComparison.Ordinal) && m.GetParameters().Length == 2);
+
+        private static bool Prepare()
+        {
+            if (Find() != null) return true;
+            MelonLogger.Warning("Couldn't find the game's RequestPlayerData method: putting back what players left with is off");
+            return false;
+        }
+
+        private static MethodBase TargetMethod() => Find()!;
+
+        private static void Prefix(Player __instance, string playerCode, bool isHost)
         {
             try
             {
                 if (isHost || !InstanceFinder.IsServer || !RestoreLeftWith) return;
                 if (!SafeCode(playerCode ?? "") || !ulong.TryParse(playerCode, out var id)) return;
+                // playerCode comes from the client: only act when it is the connection's own checked Steam ID.
+                var conn = __instance?.Owner;
+                ulong verified = conn != null ? BanList.VerifiedSteamId(conn.ClientId) : 0;
+                if (verified != id)
+                {
+                    Utils.Log.Info($"Not restoring {id}'s files: the request came from {(verified == 0 ? "a connection with no checked Steam ID" : verified.ToString())}");
+                    return;
+                }
                 // Left less than 10 s ago: their exit save is in, so record it now.
                 for (int i = _pending.Count - 1; i >= 0; i--)
                     if (_pending[i].Id == id) { var pd = _pending[i]; _pending.RemoveAt(i); Record(pd); }
@@ -394,12 +453,10 @@ public static partial class DepartedPlayers
         var dir = Path.Combine(folder, "Player_" + id);
         if (!Directory.Exists(dir)) return;
         AutoSave.BackUp(id.ToString(), force: true);
-        File.WriteAllText(Path.Combine(dir, "Inventory.json"), c.ExpectedInventory);
-        if (c.ExpectedClothing.Length > 0) File.WriteAllText(Path.Combine(dir, "Clothing.json"), c.ExpectedClothing);
+        AutoSave.WriteAtomic(Path.Combine(dir, "Inventory.json"), c.ExpectedInventory);
+        if (c.ExpectedClothing.Length > 0) AutoSave.WriteAtomic(Path.Combine(dir, "Clothing.json"), c.ExpectedClothing);
         Invalidate();
         string what = string.Join("; ", new[] { c.Missing.Count > 0 ? "gave back " + string.Join(", ", c.Missing) : "", c.Extra.Count > 0 ? "removed " + string.Join(", ", c.Extra) : "" }.Where(s => s.Length > 0));
         MelonLogger.Msg($"{name} rejoined with a save that differed from what they left with; put it back ({what}). The replaced files are in UserData/BiggerLobbies/PlayerBackups");
     }
 }
-
-#endif
