@@ -69,7 +69,7 @@ Everything is on by default, and most of it is easier to change in **Host settin
 |---|---|---|
 | `MaxPlayers` | `20` | Lobby size, from 4 to 250. See [hosting big lobbies](docs/hosting-big-lobbies.md) |
 | `LobbyPrivacy` | `FriendsOnly` | Who can join: `Private` (invite only), `FriendsOnly` or `Open` (strangers can join too) |
-| `WhitelistEnabled` | `false` | Only players on the whitelist can join. The list starts empty each time you start the game |
+| `WhitelistEnabled` | `false` | Only players on the whitelist can join, and players already in who aren't on it are removed. The list starts empty each time you start the game, and nobody is removed while it's empty |
 | `SavedCrews` | empty | Named whitelists. Easiest to manage in Host settings |
 | `BannedPlayers` | empty | Banned Steam IDs, with an optional end time. Saved between games |
 | `HostPanelKey` | `F6` | Key that opens Host settings while you host |
@@ -78,7 +78,7 @@ Everything is on by default, and most of it is easier to change in **Host settin
 
 | Setting | Default | What it does |
 |---|---|---|
-| `DiscordPresence` | `true` | Show what you're doing under "Playing Schedule I" on Discord. Needs Discord running on your PC |
+| `DiscordPresence` | `true` | Show what you're doing under "Playing Schedule I" on Discord. Needs Discord running on your PC. Under Proton it needs a Discord IPC bridge |
 | `DiscordShowPlayers` | `true` | Show the player count, like (3 of 20) |
 | `DiscordShowLobbyType` | `true` | Show Friends only, Open or Private |
 | `DiscordShowSaveName` | `false` | Show your organisation's name. Anyone who can see your profile can read it |

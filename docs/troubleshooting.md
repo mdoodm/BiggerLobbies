@@ -30,7 +30,7 @@ If you use r2modman, check you launched with **Start modded** and not from Steam
 
 ### I updated, but nothing changed
 
-Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.2`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
+Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.3`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
 
 ## Host settings
 
@@ -55,6 +55,8 @@ Make sure `AlwaysHostLobby` and `LateJoinEnabled` are on. Your game only accepts
 ### Nobody can join, and the whitelist is on
 
 The whitelist starts empty every time you start the game, and the log warns `Whitelist is on and empty`. Add players in Host settings on the **Access** tab, or load a saved crew. A refused player shows as `Refused … not on the whitelist`.
+
+Turning the whitelist on, or loading a crew, also removes players who are already in and aren't on the list. While the list is empty nobody is removed, so you can switch it on first and add players after.
 
 ### Someone who isn't my Steam friend can't join
 
@@ -85,6 +87,16 @@ That's what players without BiggerLobbies see. Steam doesn't let a host remove a
 ### A ban didn't stop someone
 
 Bans use the Steam ID Steam checks at login, so a renamed account is still banned. Check the ban is still listed on the **Access** tab: timed bans end on their own. A refused player shows as `Refused … banned` in the log.
+
+### Host settings says "Couldn't ban …"
+
+The player has no verified Steam ID yet (they're still connecting), or it's your own. The player is kicked instead and the reason you typed is kept, so you can ban them once they're back in.
+
+## Discord
+
+### Discord doesn't show anything
+
+Discord has to be running on the same PC before the game starts, and the log shows `Discord presence: couldn't reach Discord` if it can't be found. The mod connects through Discord's Windows pipe, so on Linux or Steam Deck under Proton it only works with a Discord IPC bridge for Wine. Without one, the mod retries quietly, waiting longer each time.
 
 ## Lost progress or items
 

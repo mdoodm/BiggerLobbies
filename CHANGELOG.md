@@ -2,6 +2,26 @@
 
 All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
 
+## 2.0.3
+
+### Security
+- The host now checks that a joining player's Steam ID matches the one Steam verified for their connection. Spoofed IDs are disconnected without affecting the real player.
+- Kick and ban notices are rate-limited, and no longer show the ban reason to the whole lobby.
+
+### Changed
+- Take items now moves one stack at a time and writes the player's file first, so nothing is lost or duplicated when your inventory is full or a write fails.
+- Player backups skip identical copies. Records are tied to the save's creation date, so a reused save slot doesn't inherit old records.
+- Turning on the whitelist or loading a crew removes connected players who aren't on it. Nothing is removed when the list is empty.
+- Host settings: presence dots and F6 keep working after returning to the menu, lists no longer rebuild every minute, and each refresh does less work.
+- Build: the Mono build is removed, and the project targets net6.0. On Windows, builds copy into Mods by default. Closing and relaunching the game needs `-p:Deploy=true`.
+
+### Fixed
+- Autosave no longer fires while a different save is loading.
+- Bans that can't be applied now say so and kick the player instead.
+- Always host lobby waits until the lobby is entered, and only leaves a lobby it abandoned after a timeout. The invite overlay no longer opens by itself when joining a friend.
+- Late join ignores kicked and hidden players. The lobby layout is restored when the size drops back to 20 or fewer.
+- Discord presence can't hang, and it stops when turned off.
+
 ## 2.0.2
 
 ### Added
