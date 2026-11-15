@@ -6,7 +6,8 @@ All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0
 
 ### Security
 - The host now checks that a joining player's Steam ID matches the one Steam verified for their connection. Spoofed IDs are disconnected without affecting the real player.
-- Kick and ban notices are rate-limited, and no longer show the ban reason to the whole lobby.
+- Kick and ban notices are rate-limited, and no longer post the ban reason in lobby chat, where every member could read it. Banned players with the mod now see "Banned from this lobby" without the reason; the reason stays in your ban list.
+- Text other players' games send (mod names and versions) is cleaned before it's shown or logged.
 
 ### Changed
 - Take items now moves one stack at a time and writes the player's file first, so nothing is lost or duplicated when your inventory is full or a write fails.

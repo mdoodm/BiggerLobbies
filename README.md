@@ -30,7 +30,7 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 
 **Host settings** sits under Settings in the main menu and the pause menu, or press **F6** while you host. Changes apply straight away, without a restart.
 
-- **Players.** See everyone's ping. Kick lets them rejoin; Ban keeps them out for an hour, a day, a week or for good, with an optional reason. Players who also have BiggerLobbies are told why they were removed, and removed players drop off your lobby screen. For players with BiggerLobbies you also see their version and any mods they're missing.
+- **Players.** See everyone's ping. Kick lets them rejoin; Ban keeps them out for an hour, a day, a week or for good, with an optional reason that stays on your side. Players who also have BiggerLobbies are told whether they were kicked, banned or not on the whitelist, and removed players drop off your lobby screen. For players with BiggerLobbies you also see their version and any mods they're missing.
 - **Take items.** Someone grabbed the product and left? Move their items and cash into your inventory, and they don't get them back if they rejoin. Every take is logged, with a copy of what they had. Changed your mind? **Give back** returns what you still carry to their empty slots.
 - **Access.** Build a whitelist from your Steam friends, save it as a crew, and load it next session in one click. Bans are saved between games and end on their own.
 - **Lobby.** Private, Friends only or Open, and the lobby size, even while friends are in.
