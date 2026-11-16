@@ -19,19 +19,13 @@ Only the host's setting counts. Friends don't need to change anything, or instal
 
 ## Past 250 (experimental)
 
-Steam caps one lobby at 250 members. With **Enable large lobbies** on the **Experimental** tab (`ExperimentalLargeLobbies = true`), the size can go up to 748. Use the **Large lobby size** slider on the same tab.
-
-How it works:
-
-- Past 250, BiggerLobbies opens up to two hidden overflow lobbies next to yours. All of them lead into your game and share your lobby size.
-- You take a place in each lobby, so three lobbies hold 250 + 249 + 249 = 748 people.
-- Steam's **Join Game** only leads to your main lobby. Once that's full, the game's invite button invites into an overflow lobby with room.
-- Your lobby screen only shows the main lobby. The Experimental tab shows how full each lobby is.
-- Large lobbies turn off other branches: Steam allows only a few hidden lobbies per account.
-
-Nobody has played with anywhere near this many people. At this size your upload speed and CPU are almost certainly the limit, not the lobbies.
+Steam caps one lobby at 250 people. The experimental **large lobbies** take you up to 748 with extra lobbies that lead into the same game. See [Experimental features](experimental.md#large-lobbies) for how it works, and what's been tested so far.
 
 ## What players see
+
+<p align="center">
+  <img src="../assets/screenshots/lobby-row.png" alt="The lobby screen's row of player portraits, twelve players across" width="100%">
+</p>
 
 | Players in the lobby | Lobby screen |
 |---|---|
@@ -69,6 +63,7 @@ The more people join, the more likely someone causes trouble. Host settings has 
 - **Lobby screen:** checked with 40 and 100 slots.
 - **A crowd on the host:** a save ran with 250 simulated players walking around at a playable frame rate.
 - **Host settings:** the Players tab stayed smooth with 250 test players listed.
+- **Large lobbies:** both extra lobbies opened next to the main one, on a default-branch host on its own. Nobody has joined through one yet.
 
 ## Tell us how it went
 
@@ -76,17 +71,20 @@ If you host a big session, [open a big session report](https://github.com/mdoodm
 
 ## Testing tools
 
-Two settings let you check a big lobby on your own. They're for testing only: set them back to `0` before you play.
+These settings let you check things on your own. They're for testing only: turn them off before you play.
 
-| Setting | What it does |
-|---|---|
-| `DebugFakePlayers` | Fills the lobby screen and the Host settings Players tab with this many test players, to check the layout. Test players borrow your Steam friends' names and avatars, and can't be kicked or banned |
-| `DebugDummyPlayers` | 10 seconds after a save loads, spawns this many copies of your character walking around you, and logs your frame rate every 10 seconds |
+| Setting | Default | What it does |
+|---|---|---|
+| `DebugFakePlayers` | `0` | Fills the lobby screen and the Host settings Players tab with this many test players, to check the layout. Test players borrow your Steam friends' names and avatars, and can't be kicked or banned |
+| `DebugDummyPlayers` | `0` | 10 seconds after a save loads, spawns this many copies of your character walking around you, and logs your frame rate every 10 seconds |
+| `DebugShowcase` | `false` | Fills every Host settings list with made-up players for screenshots: random NPCs from your save, with their names and portraits. Your real players, bans and logs are hidden while it's on, and buttons on made-up rows do nothing. With `DebugFakePlayers`, the lobby screen's test players wear NPC portraits too. Load a save first: the main menu has no NPCs |
+| `DebugTour` | `false` | Runs the menus by itself: screenshots Host settings on the main menu, loads your last save, then screenshots the lobby screen and every tab, top and bottom. The pictures are of the game only, in `UserData\BiggerLobbies\Tour` |
+| `DebugCrossBranchKey` | empty | A key name, such as `F8`. While you host, it switches your lobby between your branch and the other one by hand. Superseded by [other branches](experimental.md#playing-across-branches) |
 
-A frame-rate line looks like this:
+A frame-rate line from `DebugDummyPlayers` looks like this:
 
 ```
 [dummies] 250 dummies: 32 fps average, 7 lowest (last 10 s)
 ```
 
-Neither tool is real. The placeholders and dummies aren't networked, aren't in the player list and are never saved. They show how the lobby screen looks and what a crowd costs your PC to draw, not network traffic, joining or saving.
+None of these are real players. Placeholders, dummies and showcase players aren't networked, aren't in the game's player list and are never saved. They show how the screens look and what a crowd costs your PC to draw, not network traffic, joining or saving.

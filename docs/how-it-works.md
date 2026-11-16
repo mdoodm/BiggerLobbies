@@ -27,6 +27,8 @@ For modders, curious players, and anyone reviewing the code. BiggerLobbies is a 
 | Give back | Nothing | Only while the player is away and their file has settled. For each taken slot that is still empty in their file, takes up to the amount taken out of the host's inventory, counting only stacks whose item data matches the stored slot (quality, packaging and so on; quantity and game version aside). Waits half a second, counts what really left the host's inventory, and writes only that back: the stored slot text with its quantity changed. Cash works the same way. The record keeps what was returned, so a second press never goes over the original |
 | Discord presence | Discord shows "Playing Schedule I" from its own list of known games, with nothing underneath | Talks to Discord over its local IPC pipe (`\\.\pipe\discord-ipc-N`, the discord-rpc protocol: a 4-byte opcode, a 4-byte length and JSON) from a background thread, sends the activity under Discord's own application entry for Schedule I at most every 15 s, and clears it on quit. No extra DLL |
 | Version and mods | Nothing | A player with the mod posts `bl1\|hello\|<steam id>\|<version>\|<mods>` in the lobby chat when they enter. The host keeps it for the session and compares the mod list with its own, skipping HUD mods, MLVScan and `IgnoredModNames` |
+| Extra lobbies (experimental) | A Steam account can be in one normal lobby, and a player's game leaves any lobby whose `version` isn't exactly its own | Opens up to two invisible Steam lobbies next to the main one: one carrying the other branch's version (other branches), or up to two carrying the host's own (large lobbies, past Steam's 250 per lobby). Each one is matched to its own `CreateLobby` call through a `CallResult` (timing is only a fallback, used if that fails, and only while the game isn't creating a lobby of its own). Prefixes skip the game's `SteamLobbyService` handlers for them, since the game receives every lobby's Steam events. They copy the main lobby's data once a second and every chat message straight away, and share one size budget: each lobby's Steam limit is the size minus the players in the others |
+| Join Game across branches (experimental) | Steam's Join Game can only lead to the main lobby | A member who enters and leaves the main lobby within 5 s switches its `version` to the other branch for 15 s, so their retry passes the game's check |
 | Host settings screen | No host controls | Clones the game's Settings screen into the main menu and the pause menu, strips its scripts, and builds the tabs and lists from the game's own buttons, sliders and text |
 
 The mod writes only warnings and errors to the log unless `DiagnosticLog` is on. With it on, every step of the lobby and join flow is logged with a `[diag]` prefix.
@@ -48,7 +50,7 @@ On Mono, private game members (such as the Steam transport's verified Steam IDs)
 |---|---|
 | `Core.cs` | Entry point: the backend check, applying patches, and starting each feature |
 | `Integrations/LobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
-| `Integrations/LobbySize.cs` | The `MaxPlayers` setting, live size changes, the network connection limit, the lobby screen table and `DebugFakePlayers` |
+| `Integrations/LobbySize.cs` | The `MaxPlayers` setting and `ExperimentalLargeLobbies`, live size changes, the network connection limit, the lobby screen table and `DebugFakePlayers` |
 | `Integrations/LobbyDedupePatches.cs` | One lobby per host |
 | `Integrations/LobbyPrivacy.cs` | Lobby type, and letting strangers stay in Open lobbies |
 | `Integrations/HostLobby.cs` | The Steam lobby this machine is hosting |
@@ -65,6 +67,10 @@ On Mono, private game members (such as the Steam transport's verified Steam IDs)
 | `Integrations/ModHandshake.cs` | The version and mod list players with the mod send, and the comparison shown on the Players tab |
 | `Integrations/Friends.cs`, `Integrations/Avatars.cs` | Steam friends, online status and avatars for the pickers |
 | `Integrations/HostSettingsMenu.cs` | The Host settings screen |
+| `Integrations/CrossBranchLobby.cs` | Extra lobbies for other branches and large lobbies, their shared size, and the Join Game retry |
+| `Integrations/CrossBranchTest.cs` | `DebugCrossBranchKey`: switching the lobby's version by hand |
+| `Integrations/VersionLabel.cs` | The version label in the corner of the screen |
+| `Integrations/Showcase.cs`, `Integrations/DebugTour.cs` | `DebugShowcase` and `DebugTour`: made-up players and automatic screenshots |
 | `Integrations/AutoSave.cs` | Autosave, player saves, save on leave, and the settings category |
 | `Integrations/GrowSyncFix.cs` | Plant sync |
 | `Integrations/DebugDummies.cs` | `DebugDummyPlayers`: dummy characters and frame-rate logging |

@@ -64,15 +64,15 @@ Give back never makes items. It only returns what you still carry, matching the 
 
 The host and that player are on different Steam branches: the popup shows `0.4.7f12` for the default branch and `0.4.7f12 Alternate` for Mono. The game itself refuses the join, with or without BiggerLobbies.
 
-Either put everyone on the same branch, under the game's **Properties**, then **Betas** in Steam, or let both branches in (experimental): in Host settings, on the Experimental tab, set **Accept other branches** to On. Then:
-
-- **Invite (other branch)** invites them straight in.
-- If they use **Join Game**, they press it a second time within 15 seconds of the mismatch. The log shows `left your lobby straight away, probably on the other branch` when your lobby switches for them.
-- If the log shows `Cross-branch lobby: Steam couldn't create it`, Steam refused the second lobby. Join Game, as above, still works.
+Either put everyone on the same branch, under the game's **Properties**, then **Betas** in Steam, or turn on the experimental [Other branches](experimental.md#playing-across-branches) and invite them with **Invite (other branch)**. With it on, a player who uses **Join Game** gets the mismatch once and gets in on a second try within 15 seconds.
 
 ### A friend can't join after I've loaded in
 
 Make sure `AlwaysHostLobby` and `LateJoinEnabled` are on. Your game only accepts players if it started online; the log shows `Always host lobby: lobby ready; loading as host` when it did. When someone joins mid-game, the log shows `Player joined mid-game`.
+
+### Large lobbies: players past 250 can't get in
+
+Steam's **Join Game** only reaches your main lobby, which holds 250. Invite them instead: once your lobby is full, the invite button sends them to an extra lobby. On the Experimental tab, the line under **Large lobby size** should say how many extra lobbies are open. If it stays at "opening an extra lobby", look for `Extra lobby: Steam couldn't create it` in the log. See [Experimental features](experimental.md#large-lobbies).
 
 ### Nobody can join, and the whitelist is on
 

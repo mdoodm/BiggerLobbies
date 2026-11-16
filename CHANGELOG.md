@@ -18,6 +18,7 @@ All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. 
   - Buttons that do nothing right now are greyed out.
   - The Discord connection note sits under Rich presence, and Save now is its own row on the Saving tab.
   - Plainer wording on the Experimental tab.
+- Docs: a new [Experimental features](docs/experimental.md) page covers large lobbies and other branches, with what's been tested so far. The README shows real screenshots of Host settings, and the testing tools moved to [Hosting big lobbies](docs/hosting-big-lobbies.md#testing-tools).
 - An extra lobby that's no longer needed (other branches or large lobbies turned off, or the size lowered) stops taking new players and closes once it's empty, instead of closing with players in it.
 - Other branch has its own **Experimental** tab in Host settings, with an **Accept other branches** switch and the Invite (other branch) button. It was on the Lobby tab.
 

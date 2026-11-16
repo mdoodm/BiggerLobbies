@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner-crew.svg" alt="BiggerLobbies: the Schedule I lobby screen showing Lobby (47/60), rows of 20 player avatars, a dashed invite tile and one player who joined mid-game, with log lines for the lobby size and the raised Steam connection limit" width="100%">
+  <img src="assets/banner-crew.svg" alt="BiggerLobbies: the Schedule I lobby screen showing Lobby (47/748), rows of 20 player avatars, a dashed invite tile and one player who joined mid-game, with log lines for the 748-player lobby size, the raised Steam connection limit and an overflow lobby opening" width="100%">
 </p>
 
 Friends join any time, rejoin after a crash, and nobody loses progress. Only the host installs it.
@@ -17,7 +17,7 @@ Friends join any time, rejoin after a crash, and nobody loses progress. Only the
 
 Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLobbies takes those limits away, and everyone else joins with the normal game.
 
-- **Room for everyone.** 20 players by default, and anything up to 250 if your PC and connection can carry it. Up to 748 with the experimental large lobbies.
+- **Room for everyone.** 20 players by default, and anything up to 250 if your PC and connection can carry it, or 748 with [experimental large lobbies](docs/experimental.md#large-lobbies).
 - **Invite whenever you like.** Your game goes online as your save loads, so friends can accept an invite or use Steam's **Join Game** at any point in the session.
 - **Crashes don't end the session.** A player whose game crashes can come straight back in, without you restarting.
 - **Nobody loses progress.** The world saves every 5 minutes, each player every 30 seconds, and everything saves the moment someone drops.
@@ -26,32 +26,41 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 ## Run the room
 
 <p align="center">
-  <img src="assets/host-settings.svg" alt="The Host settings screen on the Players tab: three players with their ping and Kick and Ban buttons, and a player who left the game carrying items and $4,872, with a Take items button" width="100%">
+  <img src="assets/screenshots/host-players.png" alt="Host settings on the Players tab: eight players with their portraits, ping, mod version and Kick and Ban buttons. One is a version behind, shown in red, and one is missing a mod" width="640">
 </p>
 
 **Host settings** sits under Settings in the main menu and the pause menu, or press **F6** while you host. Changes apply straight away, without a restart.
 
-- **Players.** See everyone's ping. Kick lets them rejoin; Ban keeps them out for an hour, a day, a week or for good, with an optional reason that stays on your side. Players who also have BiggerLobbies are told whether they were kicked, banned or not on the whitelist, and removed players drop off your lobby screen. For players with BiggerLobbies you also see their version and any mods they're missing.
+- **Players.** See everyone's ping. Kick lets them rejoin; Ban keeps them out for an hour, a day, a week or for good, with an optional reason that stays on your side. Players who also have BiggerLobbies are told whether they were kicked, banned or not on the whitelist, and you see their version and any mods they're missing.
 - **Take items.** Someone grabbed the product and left? Move their items and cash into your inventory, and they don't get them back if they rejoin. Every take is logged, with a copy of what they had. Changed your mind? **Give back** returns what you still carry to their empty slots.
 - **Access.** Build a whitelist from your Steam friends, save it as a crew, and load it next session in one click. Bans are saved between games and end on their own.
 - **Lobby.** Private, Friends only or Open, and the lobby size, even while friends are in.
-- **Experimental.** Large lobbies past 250 players, or accept friends on the other Steam branch too, with no mod on their side. See [Good to know](#good-to-know).
 - **Saving.** How often the world and each player save, plus a Save now button.
 - **Discord.** Your profile shows "Hosting a lobby, Friends only (3 of 20)" under Playing Schedule I. Player count, lobby type and save name can each be turned off; the save name is off by default.
 
-Settings that could cause trouble show in amber when they're on, and the bottom-left corner of your screen shows which BiggerLobbies version is running.
+Settings that let more people in, or are still being tested, turn amber when they're on. The bottom-left corner of your screen shows which version of BiggerLobbies is running.
 
 <details>
-<summary><b>Screenshots</b></summary>
-
-The players, bans and crews here are the game's own NPCs, from the `DebugShowcase` testing tool.
+<summary><b>More screenshots</b></summary>
+<br>
 
 | | |
 |---|---|
-| ![Host settings, Players tab: eight players with their ping, mod version and Kick and Ban buttons, under the lobby screen's row of player portraits](assets/screenshots/game-1-players.png) | ![Players tab, further down: two players who left with items and cash, and the Taken items log with Give back](assets/screenshots/game-1-players-bottom.png) |
-| ![Access tab: saved crews, ban length and reason, and two banned players, one for 20 hours with a reason and one permanent](assets/screenshots/game-2-access-bottom.png) | ![Experimental tab: large lobbies turned on at 748 players with two extra lobbies open, and the Other branches section](assets/screenshots/game-5-experimental.png) |
+| ![Players tab, further down: two players who left carrying items and cash, with Take items, and the Taken items log with Give back](assets/screenshots/host-players-left.png) | ![Access tab: two saved crews, ban length and reason, one player banned for 20 hours with a reason and one banned permanently](assets/screenshots/host-access-bans.png) |
+| ![Lobby tab: Who can join set to Open, shown in amber, the lobby size and the Discord settings](assets/screenshots/host-lobby.png) | ![Saving tab: world saves every 5 minutes, player saves every 30 seconds and a Save now button](assets/screenshots/host-saving.png) |
+
+The players in these screenshots are the game's own characters, put there by a [testing tool](docs/hosting-big-lobbies.md#testing-tools).
 
 </details>
+
+## Experimental
+
+Two features are still being tested. Both are off by default, on the **Experimental** tab of Host settings, and only one can be on at a time.
+
+- **Large lobbies.** Go past 250 players, up to 748. Once your lobby is full, your invite button sends new players to an extra lobby that leads into the same game.
+- **Other branches.** Friends on the other Steam branch join your game, without the mod.
+
+Read [Experimental features](docs/experimental.md) before you turn either on, and back up your save first.
 
 ## Install
 
@@ -90,7 +99,7 @@ Everything is on by default, and most of it is easier to change in **Host settin
 
 | Setting | Default | What it does |
 |---|---|---|
-| `MaxPlayers` | `20` | Lobby size, from 4 to 250. See [hosting big lobbies](docs/hosting-big-lobbies.md) |
+| `MaxPlayers` | `20` | Lobby size, from 4 to 250 (748 with `ExperimentalLargeLobbies`). See [hosting big lobbies](docs/hosting-big-lobbies.md) |
 | `LobbyPrivacy` | `FriendsOnly` | Who can join: `Private` (invite only), `FriendsOnly` or `Open` (strangers can join too) |
 | `WhitelistEnabled` | `false` | Only players on the whitelist can join, and players already in who aren't on it are removed. The list starts empty each time you start the game, and nobody is removed while it's empty |
 | `SavedCrews` | empty | Named whitelists. Easiest to manage in Host settings |
@@ -133,24 +142,14 @@ Everything is on by default, and most of it is easier to change in **Host settin
 |---|---|---|
 | `DiagnosticLog` | `false` | Write detailed lines to the MelonLoader log. Otherwise only warnings and errors are logged |
 
-There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) for checking a big lobby without a big group. Leave them at `0`.
-
-**Testing only**
-
-Leave these off for normal play.
-
-| Setting | Default | What it does |
-|---|---|---|
-| `DebugShowcase` | `false` | Fills Host settings with made-up players: random NPCs from your save, with their portraits. For screenshots. Your real players, bans and logs are hidden while it's on, and buttons on the made-up rows do nothing. Load a save first: the main menu has no NPCs |
-| `DebugTour` | `false` | Runs the menus by itself: screenshots Host settings on the main menu, loads your last save, then screenshots the lobby screen and every tab. The pictures go to `UserData/BiggerLobbies/Tour` |
-| `DebugCrossBranchKey` | empty | A key name, such as `F8`. While you host, it switches your lobby between your branch and the other one by hand. Leave empty to turn it off |
+[Testing tools](docs/hosting-big-lobbies.md#testing-tools), for checking layouts and taking screenshots on your own, are described in the docs. Leave them off for normal play.
 
 **Experimental**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `ExperimentalLargeLobbies` | `false` | Allows a `MaxPlayers` past 250, up to 748. Past 250, players join through up to two hidden overflow lobbies. Turns off `CrossBranchLobby`. Untested at this size. Easiest to set on the Experimental tab |
-| `CrossBranchLobby` | `false` | While you host, also open a hidden lobby for friends on the other Steam branch, so both branches can join. Easiest to turn on in Host settings, on the Experimental tab. See [Good to know](#good-to-know) |
+| `ExperimentalLargeLobbies` | `false` | Allows a `MaxPlayers` past 250, up to 748. See [large lobbies](docs/experimental.md#large-lobbies) |
+| `CrossBranchLobby` | `false` | Lets friends on the other Steam branch join. See [other branches](docs/experimental.md#playing-across-branches) |
 
 </details>
 
@@ -160,13 +159,7 @@ Leave these off for normal play.
 - Every player needs the same content mods as the host. A mod that adds new items or objects on the host but not on a friend's game breaks their world.
 - With r2modman, launch with Start modded, not from Steam.
 - Normally everyone in a lobby must be on the same Steam branch. A player on the other branch gets "Version Mismatch" (`0.4.7f12` and `0.4.7f12 Alternate`) from the game itself.
-- **Playing across branches (experimental).** In Host settings, on the Experimental tab, set **Accept other branches** to On. While you host, a second, hidden lobby opens for the other branch, and both lead into your game. Friends on the other branch don't need the mod:
-  - **Invite (other branch)** on the same tab invites them straight in.
-  - With Steam's **Join Game** they see "Version Mismatch" once. Your lobby then accepts their branch for 15 seconds, so their second try works. Friends on your branch who try during those seconds get the same message once, and their retry works.
-  - Both lobbies share your lobby size.
-
-  The two builds may not stay fully in sync, so back up your save first. Results are welcome in an [issue](https://github.com/mdoodm/BiggerLobbies/issues/new/choose), with both players' logs.
-- **Large lobbies (experimental).** Steam caps one lobby at 250 people. With **Enable large lobbies** on the Experimental tab, the size goes up to 748: once your lobby is full, your invite button sends new players to one of up to two extra lobbies that lead into the same game. Steam's Join Game only reaches the first lobby. Nobody has played with anywhere near this many people, so your connection and PC set the real limit. See [Hosting big lobbies](docs/hosting-big-lobbies.md#past-250-experimental).
+- Friends on the other branch can join with the experimental [Other branches](docs/experimental.md#playing-across-branches) feature.
 - With both DLLs in `Mods`, the log shows the one for the other branch being skipped. On the default branch that's a short `'BiggerLobbies (Mono)' is incompatible` notice. On the `alternate` branch it's a red `Failed to load Melon 'BiggerLobbies_Il2cpp'` error with a stack trace. Both are expected and harmless. Delete the other DLL if you'd rather not see them.
 - The Mono build shows as `BiggerLobbies (Mono)` in the log.
 - MelonLoader won't load it alongside ModManager & PhoneApp.
@@ -176,6 +169,7 @@ Leave these off for normal play.
 | Page | For when you want to |
 |---|---|
 | [Hosting big lobbies](docs/hosting-big-lobbies.md) | Go past 20 players, understand the limits, or test a big lobby on your own |
+| [Experimental features](docs/experimental.md) | Host past 250 players, or let friends on the other Steam branch join |
 | [Troubleshooting](docs/troubleshooting.md) | Fix a load error, a friend who can't join, or lost progress |
 | [Coming from ifBars/BiggerLobbies](docs/coming-from-ifbars.md) | Switch from the original mod and see what changed |
 | [How it works](docs/how-it-works.md) | Read what each fix does inside the game, or build from source |

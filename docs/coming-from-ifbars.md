@@ -16,7 +16,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 |---|---|---|
 | Game 0.4.7 | Fails to load | Works |
 | Who installs it | Every player | Only the host |
-| Lobby size | 20 | 20 by default, anything from 4 to 250 |
+| Lobby size | 20 | 20 by default, anything from 4 to 250, or 748 with the experimental large lobbies |
 | Inviting after you load a save | Only if you pressed Invite in the menu first | Always |
 | Joining a game in progress | Host must restart | Supported |
 | Rejoining after a crash | Blocked | Supported |
