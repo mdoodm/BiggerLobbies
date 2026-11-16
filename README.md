@@ -120,6 +120,12 @@ Everything is on by default, and most of it is easier to change in **Host settin
 
 There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) for checking a big lobby without a big group. Leave them at `0`.
 
+**Testing cross-branch play**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `DebugCrossBranchKey` | empty | A key name, such as `F8`. While you host, it switches your lobby between your branch and the other one, so a friend on the other branch can join. Experimental, see [Good to know](#good-to-know). Leave empty to turn it off |
+
 </details>
 
 ## Good to know
@@ -128,6 +134,7 @@ There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) fo
 - Every player needs the same content mods as the host. A mod that adds new items or objects on the host but not on a friend's game breaks their world.
 - With r2modman, launch with Start modded, not from Steam.
 - Everyone in a lobby must be on the same Steam branch. A player on the other branch gets "Version Mismatch" (`0.4.7f12` and `0.4.7f12 Alternate`) from the game itself.
+- Cross-branch play is being tested. Set `DebugCrossBranchKey` to a key such as `F8`. While you host, press it and a friend on the other branch can join. Press it again once they're in, so friends on your branch can join again. It's experimental: the two builds may not stay in sync, so back up your save first. Results are welcome in an [issue](https://github.com/mdoodm/BiggerLobbies/issues/new/choose), with both players' logs.
 - With both DLLs in `Mods`, the log shows the one for the other branch being skipped. On the default branch that's a short `'BiggerLobbies (Mono)' is incompatible` notice. On the `alternate` branch it's a red `Failed to load Melon 'BiggerLobbies_Il2cpp'` error with a stack trace. Both are expected and harmless. Delete the other DLL if you'd rather not see them.
 - The Mono build shows as `BiggerLobbies (Mono)` in the log.
 - MelonLoader won't load it alongside ModManager & PhoneApp.
