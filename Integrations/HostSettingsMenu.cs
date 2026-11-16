@@ -105,10 +105,14 @@ public static class HostSettingsMenu
     {
         // The game can report the same scene more than once; run one injection per menu at a time.
         if (scene == "Menu" && !_injecting[0]) { _menu = null; _injecting[0] = true; MelonCoroutines.Start(InjectWhenReady(false)); }
-        else if (scene == "Main" && !_injecting[1]) { _pause = null; Whitelist.WarnIfEmpty(); _injecting[1] = true; MelonCoroutines.Start(InjectWhenReady(true)); }
+        else if (IsGameScene(scene) && !_injecting[1]) { _pause = null; Whitelist.WarnIfEmpty(); _injecting[1] = true; MelonCoroutines.Start(InjectWhenReady(true)); }
     }
 
     private static readonly bool[] _injecting = new bool[2];
+
+    // A save plays in "Main"; the tutorial is its own scene, and can be hosted for others too.
+    // (Autosave and the other save features stay "Main"-only: the tutorial isn't saved.)
+    private static bool IsGameScene(string scene) => scene == "Main" || scene == "Tutorial";
 
     private static IEnumerator InjectWhenReady(bool inGame)
     {
@@ -1605,7 +1609,7 @@ public static class HostSettingsMenu
         try
         {
             string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            bool inGame = scene == "Main";
+            bool inGame = IsGameScene(scene);
             if ((inGame ? _pause : _menu) != null || (!inGame && scene != "Menu") || _injecting[inGame ? 1 : 0]) return;
             _reinjects++;
             _injecting[inGame ? 1 : 0] = true;
