@@ -367,3 +367,6 @@ assets/memories/
 
 # Decompiled game code: not redistributable, local reference only
 game-decompiled/
+
+# graphify knowledge graph output (generated locally)
+graphify-out/
