@@ -17,6 +17,9 @@
         public const string MOD_VERSION = "2.1.0";
         public const string MOD_AUTHOR = "Bars";
 
+        /// <summary>Shown in the bottom-left corner of the screen and of Host settings.</summary>
+        public const string CREDIT = MOD_NAME + " V" + MOD_VERSION + " by Mdoodm";
+
         /// <summary>
         /// Game-related constants
         /// </summary>

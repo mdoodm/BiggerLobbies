@@ -13,11 +13,25 @@ namespace BiggerLobbies.Integrations;
 public static class LobbySize
 {
     public const int Min = VANILLA_LIMIT;      // 4
-    public const int Max = 250;                // Steam's lobby member cap
+    public const int SteamMax = 250;           // Steam's member cap for one lobby
+    public const int NormalMax = SteamMax;     // largest size without experimental large lobbies
+    // Large lobbies add up to two hidden overflow lobbies (CrossBranchLobby). You're a member of
+    // each lobby you host, so three lobbies hold 250 + 249 + 249 people.
+    public const int LargeMax = SteamMax + 2 * (SteamMax - 1);   // 748
     public const int Tested = MAX_PLAYERS;     // 20, the default; above it the lobby screen switches to a table
+
+    /// <summary>Largest lobby size allowed right now.</summary>
+    public static int Max => LargeLobbies ? LargeMax : NormalMax;
+
+    /// <summary>A lobby size as one Steam lobby can take it.</summary>
+    public static int SteamLimit(int n) => Math.Clamp(n, 1, SteamMax);
 
     private static MelonPreferences_Entry<int>? _entry;
     private static MelonPreferences_Entry<int>? _fake;
+    private static MelonPreferences_Entry<bool>? _large;
+
+    /// <summary>Experimental: lobby sizes past 250, using overflow lobbies. Turns off cross-branch play.</summary>
+    public static bool LargeLobbies => _large?.Value ?? false;
 
     /// <summary>Placeholder slots shown on the lobby screen for layout testing. 0 = off.</summary>
     public static int FakePlayers => Math.Clamp(_fake?.Value ?? 0, 0, Max);
@@ -27,8 +41,12 @@ public static class LobbySize
 
     public static void Init(MelonPreferences_Category cat)
     {
+        // Read before MaxPlayers, which it allows past 250.
+        _large = cat.CreateEntry("ExperimentalLargeLobbies", false, "Experimental: large lobbies",
+            $"Experimental. Allows a lobby size up to {LargeMax}, using up to two hidden overflow lobbies once the first {SteamMax} places fill. Turns off cross-branch play. Untested at this size: your upload speed and CPU are the real limit.");
         _entry = cat.CreateEntry("MaxPlayers", MAX_PLAYERS, "Max players",
-            $"Lobby size, {Min} to {Max}. Default {Tested}. If you edit this file, restart the game. The host panel changes it without a restart.");
+            $"Lobby size, {Min} to {NormalMax} ({LargeMax} with ExperimentalLargeLobbies). Default {Tested}. If you edit this file, restart the game. The host panel changes it without a restart.");
+        if (LargeLobbies) MelonLogger.Warning($"ExperimentalLargeLobbies is on: lobby size can go up to {LargeMax}, with overflow lobbies past {SteamMax}. Experimental.");
         int v = _entry.Value;
         int clamped = Math.Clamp(v, Min, Max);
         if (clamped != v)
@@ -98,6 +116,25 @@ public static class LobbySize
     // and the Steam transport's server socket has a live SetMaximumClients. Both are set,
     // then read back, so the log shows what Steam actually accepted.
 
+    /// <summary>Turns large lobbies on or off. Returns a status line.</summary>
+    public static string SetLarge(bool on)
+    {
+        if (_large == null || on == LargeLobbies) return on ? "Large lobbies are on" : "Large lobbies are off";
+        if (!on && LiveMin > NormalMax)
+            return $"{HostLobby.MemberCount()} players are in. Large lobbies can only be turned off with {NormalMax} or fewer";
+        _large.Value = on;
+        MelonPreferences.Save();
+        if (on)
+        {
+            if (CrossBranchLobby.Enabled) CrossBranchLobby.Enabled = false;
+            Utils.Log.Info($"Large lobbies on: lobby size can go up to {LargeMax}");
+            return $"Large lobbies on. Lobby size can now go up to {LargeMax}. Other branches are off";
+        }
+        string msg = MaxPlayers > NormalMax ? " " + SetLive(NormalMax) : "";
+        Utils.Log.Info("Large lobbies off");
+        return $"Large lobbies off.{msg}";
+    }
+
     /// <summary>Lowest size allowed right now: never below the players already in.</summary>
     public static int LiveMin => Math.Max(Min, HostLobby.MemberCount());
 
@@ -133,7 +170,7 @@ public static class LobbySize
         LobbyHarmonyPatches.RefreshLobbyScreen();
         string msg = $"Lobby size changed from {before} to {n} while running: {steamPart}; {transportPart}";
         Utils.Log.Info(msg);
-        return $"Lobby size {n}. {steamPart}";
+        return HostLobby.TryGet(out _) ? $"Lobby size set to {n}. {steamPart}" : $"Lobby size set to {n}. It applies when you host";
     }
 
     private static string SetSteamLimit(int n)
@@ -212,6 +249,20 @@ public static class LobbySize
             var s = slots[i];
             if (s == null || s.gameObject.activeSelf) continue; // real player (or the local one)
             s.gameObject.SetActive(true);
+            // Showcase: placeholders wear NPC portraits (the slot's own avatar image, as the game sets it).
+            if (Showcase.TrySlotFace(added, out var face))
+                try
+                {
+                    var img = s.Find("Frame/Avatar")?.GetComponent<UnityEngine.UI.RawImage>();
+                    if (img != null)
+                    {
+                        Avatars.ShowSprite(img, face);
+                        // This slot is flipped upside down for Steam's top-row-first avatars: flip the portrait back.
+                        var u = img.uvRect;
+                        img.uvRect = new Rect(u.x, u.y + u.height, u.width, -u.height);
+                    }
+                }
+                catch { }
             added++;
         }
         return want; // slots past MaxPlayers can't be shown; they count as "+N more"

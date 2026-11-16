@@ -64,7 +64,7 @@ Give back never makes items. It only returns what you still carry, matching the 
 
 The host and that player are on different Steam branches: the popup shows `0.4.7f12` for the default branch and `0.4.7f12 Alternate` for Mono. The game itself refuses the join, with or without BiggerLobbies.
 
-Either put everyone on the same branch, under the game's **Properties**, then **Betas** in Steam, or let both branches in (experimental): turn on **Other branch** in Host settings, on the Lobby tab. Then:
+Either put everyone on the same branch, under the game's **Properties**, then **Betas** in Steam, or let both branches in (experimental): in Host settings, on the Experimental tab, set **Accept other branches** to On. Then:
 
 - **Invite (other branch)** invites them straight in.
 - If they use **Join Game**, they press it a second time within 15 seconds of the mismatch. The log shows `left your lobby straight away, probably on the other branch` when your lobby switches for them.

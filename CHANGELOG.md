@@ -2,6 +2,25 @@
 
 All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. Only the host needs the mod. Up to 2.0.3 they were for the default (Il2Cpp) branch only; from 2.1.0 there's a build for each branch.
 
+## Unreleased
+
+### Added
+- **Large lobbies (experimental, off by default).** On the Experimental tab, or with `ExperimentalLargeLobbies`: lobby sizes up to 748. Steam caps one lobby at 250, so past that, up to two hidden overflow lobbies open and share your lobby size. You take a place in each, so 748 is the most three lobbies hold. Once your lobby is full, the game's invite button invites into an overflow lobby. Steam's Join Game only leads to the main lobby. Large lobbies turn off other branches. Untested with more than a handful of players.
+
+- **Version label.** The bottom-left corner of your screen, and of Host settings, shows which BiggerLobbies version is running.
+- Testing tools: `DebugShowcase` fills Host settings with made-up players (random NPCs from your save, with their portraits) for screenshots, and hides your real players, bans and logs while it's on. `DebugTour` runs the menus by itself and saves screenshots to `UserData/BiggerLobbies/Tour`.
+
+### Changed
+- Host settings:
+  - Status messages sit at the bottom of the window and clear after a few seconds. Before, they covered the end of the tab bar and blocked clicks on the last tab.
+  - Help text wraps instead of being cut off, and so does the full list of what was taken and the save comparison under a player who left.
+  - Settings that could cause trouble (Open privacy, large lobbies, other branches) show amber when they're on.
+  - Buttons that do nothing right now are greyed out.
+  - The Discord connection note sits under Rich presence, and Save now is its own row on the Saving tab.
+  - Plainer wording on the Experimental tab.
+- An extra lobby that's no longer needed (other branches or large lobbies turned off, or the size lowered) stops taking new players and closes once it's empty, instead of closing with players in it.
+- Other branch has its own **Experimental** tab in Host settings, with an **Accept other branches** switch and the Invite (other branch) button. It was on the Lobby tab.
+
 ## 2.1.0
 
 ### Added

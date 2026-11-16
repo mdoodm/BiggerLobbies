@@ -56,8 +56,8 @@ public static class LobbyHarmonyPatches
         // Sized for Steam's cap, not our own MaxPlayers: a host can run a bigger lobby than
         // this machine's setting, and the game writes _players[i] for every member unchecked.
         var players = svc._players;
-        if (players != null && players.Length >= LobbySize.Max) return;
-        var arr = Shim.SteamIds(LobbySize.Max);
+        if (players != null && players.Length >= LobbySize.SteamMax) return;
+        var arr = Shim.SteamIds(LobbySize.SteamMax);
         if (players != null)
             for (int i = 0; i < players.Length; i++) arr[i] = players[i];
         svc._players = arr;
@@ -84,6 +84,7 @@ public static class LobbyHarmonyPatches
     private static void Service_CreateLobby_Prefix(SteamLobbyService __instance, ref int maxPlayers)
     {
         if (maxPlayers < LobbySize.MaxPlayers) maxPlayers = LobbySize.MaxPlayers;
+        maxPlayers = LobbySize.SteamLimit(maxPlayers);   // past 250, overflow lobbies take the rest
         try { EnsurePlayersArray(__instance); }
         catch (Exception e) { MelonLogger.Error($"Failed to resize players array: {e}"); }
     }
@@ -98,7 +99,7 @@ public static class LobbyHarmonyPatches
             if (result.m_eResult != EResult.k_EResultOK) return;
             var id = new CSteamID(result.m_ulSteamIDLobby);
             string n = LobbySize.MaxPlayers.ToString();
-            SteamMatchmaking.SetLobbyMemberLimit(id, LobbySize.MaxPlayers);
+            SteamMatchmaking.SetLobbyMemberLimit(id, LobbySize.SteamLimit(LobbySize.MaxPlayers));
             SteamMatchmaking.SetLobbyData(id, "max_players", n);
             SteamMatchmaking.SetLobbyData(id, "num_slots", n);
             Utils.Log.Info($"Lobby {result.m_ulSteamIDLobby} created with {LobbySize.MaxPlayers} slots");
@@ -141,7 +142,8 @@ public static class LobbyHarmonyPatches
 
         int existing = entries.childCount - 1; // child 0 is not a player slot
         var template = entries.GetChild(1);
-        for (int i = existing; i < LobbySize.MaxPlayers; i++)
+        // One slot per place in this Steam lobby; overflow lobbies don't show on this screen.
+        for (int i = existing; i < LobbySize.SteamLimit(LobbySize.MaxPlayers); i++)
         {
             var go = UnityEngine.Object.Instantiate(template.gameObject, entries);
             go.name = $"{template.gameObject.name} ({entries.childCount - 1})";

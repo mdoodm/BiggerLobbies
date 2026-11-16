@@ -97,13 +97,15 @@ public static class HostPlayers
             }
         }
         catch (Exception e) { MelonLogger.Warning($"Couldn't read the player list: {e.Message}"); }
-        try { if (InstanceFinder.IsServer) AddFakes(rows); } catch { }
+        // Showcase brings its own players; the friend-named test players would mix in with them.
+        try { if (InstanceFinder.IsServer) { if (Showcase.On) { rows.Clear(); Showcase.AddPlayers(rows); } else AddFakes(rows); } } catch { }
         return rows;
     }
 
     /// <summary>Disconnects the player, and bans them first if asked (null length = permanent). Returns a status line.</summary>
     public static string Kick(Row r, bool ban, TimeSpan? length = null, string reason = "")
     {
+        if (Showcase.IsFake(r.SteamId)) return Showcase.Inert(r.Name);
         if (r.Fake) return $"{r.Name} is a test player (DebugFakePlayers). Nothing to {(ban ? "ban" : "kick")}";
         try
         {

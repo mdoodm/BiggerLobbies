@@ -72,6 +72,8 @@ namespace BiggerLobbies
             AlwaysHostLobby.Init(cat);
             CrossBranchTest.Init(cat);
             CrossBranchLobby.Init(cat);
+            Showcase.Init(cat);
+            DebugTour.Init(cat);
             BuildUpdates();
         }
 
@@ -88,6 +90,7 @@ namespace BiggerLobbies
                 ("AutoSave", AutoSave.Update),
                 ("CrossBranchTest", CrossBranchTest.Update),
                 ("CrossBranchLobby", CrossBranchLobby.Update),
+                ("VersionLabel", VersionLabel.Update),
                 ("DebugDummies", DebugDummies.Update),
                 ("DepartedPlayers", DepartedPlayers.Update),
                 ("DepartedPlayers.LeftWith", DepartedPlayers.UpdateLeftWith),
@@ -134,6 +137,7 @@ namespace BiggerLobbies
         {
             DebugDummies.OnSceneLoaded(sceneName);
             HostSettingsMenu.OnSceneLoaded(sceneName);
+            DebugTour.OnSceneLoaded(sceneName);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

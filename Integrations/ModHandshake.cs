@@ -153,8 +153,8 @@ public static class ModHandshake
         try
         {
             if (!HostLobby.TryGet(out var lobby)) return;
-            // Players from the other branch say hello in the second lobby.
-            if (result.m_ulSteamIDLobby != 0 && result.m_ulSteamIDLobby == CrossBranchLobby.SecondId) lobby = new CSteamID(result.m_ulSteamIDLobby);
+            // Players who came in through an extra lobby (other branch, overflow) say hello there.
+            if (CrossBranchLobby.IsExtra(result.m_ulSteamIDLobby)) lobby = new CSteamID(result.m_ulSteamIDLobby);
             else if (lobby.m_SteamID != result.m_ulSteamIDLobby) return;
             ulong from = result.m_ulSteamIDUser;
             if (from == 0 || from == SteamUser.GetSteamID().m_SteamID || !IsMember(lobby, from)) return;

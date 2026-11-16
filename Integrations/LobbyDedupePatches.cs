@@ -25,6 +25,9 @@ public static class LobbyDedupePatches
     private static bool CreatePending =>
         _pendingSince >= 0f && Time.realtimeSinceStartup - _pendingSince < PendingTimeout;
 
+    /// <summary>When the game's own pending CreateLobby was made, or -1 when there isn't one.</summary>
+    internal static float GameCreateSince => CreatePending ? _pendingSince : -1f;
+
     private static bool ServiceInLobby()
     {
         try { return _service != null && _service.IsInLobby; } catch { return false; }
@@ -63,7 +66,7 @@ public static class LobbyDedupePatches
         _service = __instance;
         bool inLobby = __instance.IsInLobby;
         Log(() => $"Svc.OpenInviteUI inLobby={inLobby} pending={CreatePending}");
-        if (inLobby) return true; // normal path
+        if (inLobby) return !CrossBranchLobby.RedirectInvite(); // normal path, unless the main lobby is full (large lobbies)
 
         // Not in a lobby yet: create one (once) and open the overlay when we've entered it.
         _openInviteWhenReady = true;

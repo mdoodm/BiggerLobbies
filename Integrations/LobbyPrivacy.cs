@@ -47,9 +47,10 @@ public static class LobbyPrivacy
     };
 
     [HarmonyPrefix, HarmonyPriority(Priority.First), HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.CreateLobby))]
-    private static void CreateLobby_Prefix(ref ELobbyType eLobbyType)
+    private static void CreateLobby_Prefix(ref ELobbyType eLobbyType, ref int cMaxMembers)
     {
-        if (CrossBranchLobby.Creating) return;   // the other-branch lobby stays invisible
+        cMaxMembers = LobbySize.SteamLimit(cMaxMembers);   // Steam refuses a lobby over 250
+        if (CrossBranchLobby.Creating) return;   // extra lobbies stay invisible
         var want = SteamType(Current);
         if (eLobbyType != want)
         {

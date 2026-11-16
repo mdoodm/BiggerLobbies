@@ -2,7 +2,7 @@
 
 [Back to the README](../README.md)
 
-BiggerLobbies hosts 20 players by default. You can set any size from 4 to 250.
+BiggerLobbies hosts 20 players by default. You can set any size from 4 to 250, or up to 748 with [experimental large lobbies](#past-250-experimental).
 
 ## Change the lobby size
 
@@ -16,6 +16,20 @@ BiggerLobbies hosts 20 players by default. You can set any size from 4 to 250.
 4. Restart the game.
 
 Only the host's setting counts. Friends don't need to change anything, or install the mod at all.
+
+## Past 250 (experimental)
+
+Steam caps one lobby at 250 members. With **Enable large lobbies** on the **Experimental** tab (`ExperimentalLargeLobbies = true`), the size can go up to 748. Use the **Large lobby size** slider on the same tab.
+
+How it works:
+
+- Past 250, BiggerLobbies opens up to two hidden overflow lobbies next to yours. All of them lead into your game and share your lobby size.
+- You take a place in each lobby, so three lobbies hold 250 + 249 + 249 = 748 people.
+- Steam's **Join Game** only leads to your main lobby. Once that's full, the game's invite button invites into an overflow lobby with room.
+- Your lobby screen only shows the main lobby. The Experimental tab shows how full each lobby is.
+- Large lobbies turn off other branches: Steam allows only a few hidden lobbies per account.
+
+Nobody has played with anywhere near this many people. At this size your upload speed and CPU are almost certainly the limit, not the lobbies.
 
 ## What players see
 

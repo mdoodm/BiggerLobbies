@@ -56,6 +56,7 @@ public static class Friends
     /// <summary>Whether a Steam user is offline, online, or playing Schedule I right now.</summary>
     public static Presence StateOf(ulong steamId)
     {
+        if (Showcase.TryPresence(steamId, out var shown)) return shown;
         try
         {
             var id = new CSteamID(steamId);

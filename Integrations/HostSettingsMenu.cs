@@ -74,8 +74,12 @@ public static class HostSettingsMenu
         public Button WorldOff = null!, WorldOn = null!, PlayersOff = null!, PlayersOn = null!;
         public readonly List<(Button off, Button on, Func<bool> get)> DiscordToggles = new();
         public TextMeshProUGUI? DiscordHint;
-        public Button BranchOff = null!, BranchOn = null!;
+        public Button BranchOff = null!, BranchOn = null!, BranchInvite = null!;
         public TextMeshProUGUI BranchHint = null!;
+        public readonly List<(TextMeshProUGUI t, RectTransform row, string last)> Hints = new();
+        public Button LargeOff = null!, LargeOn = null!;
+        public Slider LargeSize = null!;
+        public TextMeshProUGUI LargeValue = null!, LargeHint = null!;
         public Slider WorldEvery = null!, PlayersEvery = null!;
         public TextMeshProUGUI WorldValue = null!, PlayersValue = null!, LastSave = null!;
         public readonly Dictionary<int, TextMeshProUGUI> PingTexts = new();
@@ -240,6 +244,12 @@ public static class HostSettingsMenu
             var c = content.GetChild(i);
             if (c.name != "Controls") UnityEngine.Object.DestroyImmediate(c.gameObject);
         }
+        if (keepTemplates)
+        {
+            // Footer strip for the status line and credit: raise the content's bottom edge.
+            var cnt = content.GetComponent<RectTransform>();
+            cnt.offsetMin = new Vector2(cnt.offsetMin.x, cnt.offsetMin.y + FooterH);
+        }
         var controls = content.Find("Controls");
         controls.gameObject.SetActive(true);
         var layout = controls.Find("ControlsPanel/Scroll View/Viewport/Vertical Layout").GetComponent<RectTransform>();
@@ -248,8 +258,16 @@ public static class HostSettingsMenu
 
         if (tabBar != null)
         {
-            for (int i = tabToggles.Count - 1; i >= 4; i--) UnityEngine.Object.DestroyImmediate(tabToggles[i].gameObject);
-            for (int i = 0; i < 4; i++) ui.Tabs.Add(tabToggles[i]);
+            for (int i = tabToggles.Count - 1; i >= TabCount; i--) UnityEngine.Object.DestroyImmediate(tabToggles[i].gameObject);
+            for (int i = 0; i < Math.Min(TabCount, tabToggles.Count); i++) ui.Tabs.Add(tabToggles[i]);
+            // The game's settings screen may have fewer tabs than Host settings: copy the last one.
+            while (ui.Tabs.Count < TabCount)
+            {
+                var src = ui.Tabs[ui.Tabs.Count - 1];
+                var copy = UnityEngine.Object.Instantiate(src.gameObject, src.transform.parent);
+                copy.transform.SetAsLastSibling();
+                ui.Tabs.Add(copy.GetComponent<Toggle>());
+            }
         }
 
         if (keepTemplates)
@@ -547,34 +565,113 @@ public static class HostSettingsMenu
 
     private static void Spacer(Ui ui, Transform parent, float h) => Row(ui, parent, h).name = "Spacer";
 
+    // Hints wrap onto as many lines as they need; their row grows to fit (and again whenever
+    // their text changes: see FitHints).
+    private const float HintRowH = 20, HintPad = 4;
+
     private static TextMeshProUGUI Hint(Ui ui, Transform parent, string s, float x = ControlX)
     {
-        var r = Row(ui, parent, 20);
+        var r = Row(ui, parent, HintRowH);
         r.name = "Hint";
-        return Text(ui, r, s, x, ui.RowW - x, Muted, 12);
+        var t = Text(ui, r, s, x, ui.RowW - x, Muted, 12);
+        WrapFit(t, r, HintRowH, HintPad);
+        ui.Hints.Add((t, r, s));
+        return t;
     }
 
-    private static readonly string[] TabNames = { "Players", "Access", "Lobby", "Saving" };
+    /// <summary>Lets a text wrap, sizes it to its lines and grows its row to fit (never below minRowH).
+    /// Returns true when the row's height changed.</summary>
+    private static bool WrapFit(TextMeshProUGUI t, RectTransform row, float minRowH, float pad)
+    {
+        t.enableWordWrapping = true;
+        t.overflowMode = TextOverflowModes.Overflow;
+        var trt = t.rectTransform;
+        float w = trt.sizeDelta.x;
+        float h = string.IsNullOrEmpty(t.text) ? 0 : t.GetPreferredValues(t.text, w, 0).y;
+        trt.sizeDelta = new Vector2(w, Mathf.Max(h, 18));
+        float rowH = Mathf.Max(minRowH, Mathf.Ceil(h) + pad);
+        if (Mathf.Approximately(row.sizeDelta.y, rowH)) return false;
+        row.sizeDelta = new Vector2(row.sizeDelta.x, rowH);
+        return true;
+    }
+
+    // The comparison line under a departed player wraps; the row grows by the extra lines, and
+    // everything else in it (centred on the row) moves up by half that, so it stays where it was.
+    private static void WrapCompareLine(RectTransform row, TextMeshProUGUI cl)
+    {
+        try
+        {
+            var crt = cl.rectTransform;
+            float w = crt.sizeDelta.x;
+            float oneLine = cl.GetPreferredValues("A", w, 0).y;
+            cl.enableWordWrapping = true;
+            cl.overflowMode = TextOverflowModes.Overflow;
+            float h = cl.GetPreferredValues(cl.text, w, 0).y;
+            float extra = Mathf.Ceil(Mathf.Max(0, h - oneLine));
+            if (extra <= 0) return;
+            float oldH = row.sizeDelta.y;
+            row.sizeDelta = new Vector2(row.sizeDelta.x, oldH + extra);
+            for (int i = 0; i < row.childCount; i++)
+            {
+                var c = row.GetChild(i).GetComponent<RectTransform>();
+                if (c == null || c == crt) continue;
+                if (Mathf.Approximately(c.anchorMin.y, 0.5f) && Mathf.Approximately(c.anchorMax.y, 0.5f))
+                    c.anchoredPosition += new Vector2(0, extra / 2f);
+            }
+            // Keep the line's first row where it was, growing downwards.
+            float top = crt.anchoredPosition.y + oneLine / 2f + extra / 2f;
+            crt.sizeDelta = new Vector2(w, h);
+            crt.anchoredPosition = new Vector2(crt.anchoredPosition.x, top - h / 2f);
+        }
+        catch (Exception e) { MelonLogger.Warning($"Couldn't wrap the save comparison line: {e.Message}"); }
+    }
+
+    // Re-fits hints whose text changed since they were last sized, and relays the open page if any grew or shrank.
+    private static void FitHints(Ui ui)
+    {
+        bool changed = false;
+        for (int i = 0; i < ui.Hints.Count; i++)
+        {
+            var (t, r, last) = ui.Hints[i];
+            if (t == null || t.WasCollected || t.text == last) continue;
+            changed |= WrapFit(t, r, HintRowH, HintPad);
+            ui.Hints[i] = (t, r, t.text);
+        }
+        if (changed) RelayoutPage(ui, ui.Tab);
+    }
+
+    private static readonly string[] TabNames = { "Players", "Access", "Lobby", "Saving", "Experimental" };
+    private const float FooterH = 30f;   // strip under the content for the status line and credit
+    private static int TabCount => TabNames.Length;
 
     private static void SetupTabs(Ui ui)
     {
-        if (ui.Tabs.Count < 4)
+        if (ui.Tabs.Count < TabCount)
         {
             // No tab bar found: show every page, one under the other, as before.
             foreach (var pg in ui.Pages) pg.SetActive(true);
             MelonLogger.Warning("Host settings: the game's tab bar wasn't found; showing one long page");
             return;
         }
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < TabCount; i++)
         {
             int idx = i;
             var t = ui.Tabs[i];
             t.gameObject.name = "Tab " + TabNames[i];
+            // The game's settings screen disables its selected tab (SettingsScreen.ShowCategory),
+            // and tabs are copied in whatever state it left them, so turn every one back on.
+            t.gameObject.SetActive(true);
+            t.interactable = true;
             var lab = t.GetComponentInChildren<TextMeshProUGUI>(true);
             if (lab != null) { lab.text = TabNames[i]; lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Overflow; }
             ui.TabLabels.Add(lab!);
             t.onValueChanged = new Toggle.ToggleEvent();
             t.onValueChanged.AddListener((UnityAction<bool>)(on => { if (on) ShowTab(ui, idx); }));
+            if (Utils.Log.Verbose)
+            {
+                var trt = t.GetComponent<RectTransform>();
+                Utils.Log.Info($"[diag] tab {i} '{TabNames[i]}': active={t.gameObject.activeInHierarchy} interactable={t.interactable} group={(t.group != null)} pos={trt.anchoredPosition} size={trt.rect.size} parent={t.transform.parent?.name}");
+            }
         }
         ShowTab(ui, 0);
     }
@@ -582,7 +679,7 @@ public static class HostSettingsMenu
     private static void ShowTab(Ui ui, int i)
     {
         ui.Tab = i;
-        for (int j = 0; j < ui.Pages.Count; j++) ui.Pages[j].SetActive(ui.Tabs.Count < 4 || j == i);
+        for (int j = 0; j < ui.Pages.Count; j++) ui.Pages[j].SetActive(ui.Tabs.Count < TabCount || j == i);
         for (int j = 0; j < ui.Tabs.Count; j++) ui.Tabs[j].SetIsOnWithoutNotify(j == i);
         RelayoutPage(ui, i);
         MelonCoroutines.Start(RelayoutNextFrame(ui, i));
@@ -700,11 +797,24 @@ public static class HostSettingsMenu
         var srt = sgo.GetComponent<RectTransform>();
         if (main && ui.Tabs.Count >= 4)
         {
-            // Main screen: the tab bar sits under the title, so the status goes at the right end of that row.
-            srt.anchorMin = srt.anchorMax = new Vector2(1, 1);
+            // Main screen: the tab bar fills the row under the title, so the status goes in the
+            // footer strip at the bottom right (CloneScreen leaves room), the credit at the bottom left.
+            srt.anchorMin = srt.anchorMax = new Vector2(1, 0);
             srt.pivot = new Vector2(1, 0.5f);
-            srt.anchoredPosition = new Vector2(-24, -66);
-            srt.sizeDelta = new Vector2(320, 20);
+            srt.anchoredPosition = new Vector2(-24, FooterH / 2f);
+            srt.sizeDelta = new Vector2(400, 20);
+
+            var cgo = UnityEngine.Object.Instantiate(ui.TextT, screen.transform);
+            cgo.name = "Credit";
+            var cr = cgo.GetComponent<RectTransform>();
+            cr.anchorMin = cr.anchorMax = new Vector2(0, 0);
+            cr.pivot = new Vector2(0, 0.5f);
+            cr.anchoredPosition = new Vector2(24, FooterH / 2f);
+            cr.sizeDelta = new Vector2(280, 20);
+            var credit = cgo.GetComponent<TextMeshProUGUI>();
+            credit.text = Utils.Constants.CREDIT; credit.fontSize = 12; credit.color = Muted; credit.richText = false;
+            credit.alignment = TextAlignmentOptions.MidlineLeft;
+            credit.enableWordWrapping = false; credit.raycastTarget = false;
         }
         else
         {
@@ -717,6 +827,7 @@ public static class HostSettingsMenu
         st.text = ""; st.fontSize = 12; st.color = Muted; st.richText = false;
         st.alignment = main && ui.Tabs.Count >= 4 ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.Center;
         st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
+        st.raycastTarget = false;   // never block clicks on what's under it
         if (main) ui.Status = st; else ui.PickerStatus = st;
     }
 
@@ -763,7 +874,7 @@ public static class HostSettingsMenu
         FindSprites();
         var root = ui.Layout;
         // One page per tab, in tab order; only the selected one is active.
-        for (int i = 0; i < 4; i++) { var pg = Box(ui, root); pg.name = "Page " + TabNames[i]; ui.Pages.Add(pg.gameObject); }
+        for (int i = 0; i < TabCount; i++) { var pg = Box(ui, root); pg.name = "Page " + TabNames[i]; ui.Pages.Add(pg.gameObject); }
         Transform L = ui.Pages[2].transform;
 
         // Lobby
@@ -781,57 +892,20 @@ public static class HostSettingsMenu
         }
         ui.PrivacyHint = Hint(ui, L, "");
 
-        // Lobby size: the game's slider, re-laid on the control column.
-        var sliderGo = UnityEngine.Object.Instantiate(ui.SliderT, L);
-        sliderGo.name = "LobbySize";
-        var srt = sliderGo.GetComponent<RectTransform>();
-        srt.anchorMin = srt.anchorMax = new Vector2(0, 1); srt.pivot = new Vector2(0, 1);
-        srt.sizeDelta = new Vector2(ui.RowW, RowH);
-        var label = sliderGo.transform.Find("Label").GetComponent<TextMeshProUGUI>();
-        label.text = "Lobby size";
-        Place(label.GetComponent<RectTransform>(), LabelX, ControlX - LabelX - 8, 30);
-        ui.Size = sliderGo.GetComponentInChildren<Slider>(true);
-        var slrt = ui.Size.GetComponent<RectTransform>();
-        Place(slrt, ControlX, 376, 20);
-        ui.SizeValue = ui.Size.transform.Find("Value").GetComponent<TextMeshProUGUI>();
-        var vrt = ui.SizeValue.GetComponent<RectTransform>();
-        vrt.anchorMin = vrt.anchorMax = new Vector2(1, 0.5f);
-        vrt.pivot = new Vector2(0, 0.5f);
-        vrt.anchoredPosition = new Vector2(16, 0);
-        vrt.sizeDelta = new Vector2(48, 30);
-        ui.SizeValue.alignment = TextAlignmentOptions.MidlineLeft;
-        ui.Size.onValueChanged = new Slider.SliderEvent();
-        ui.Size.wholeNumbers = true;
-        ui.Size.minValue = LobbySize.Min;
-        ui.Size.maxValue = LobbySize.Max;
-        ui.Size.SetValueWithoutNotify(LobbySize.MaxPlayers);
-        ui.Size.onValueChanged.AddListener((UnityAction<float>)(v =>
-        {
-            _pendingSize = Mathf.RoundToInt(v);
-            _applySizeAt = Time.unscaledTime + 0.6f;
-            ui.SizeValue.text = _pendingSize.ToString();
-        }));
+        // Lobby size: the game's slider, re-laid on the control column. Up to 250 here; the
+        // Experimental tab's slider goes further with large lobbies on.
+        ui.Size = SizeSlider(ui, L, "Lobby size", LobbySize.Min, LobbySize.NormalMax, out ui.SizeValue);
         ui.SizeHint = Hint(ui, L, "");
-
-        // Cross-branch: a second lobby for players on the other Steam branch.
-        Section(ui, L, "Other branch", out var xrow);
-        RightBtn(ui, xrow, "Invite (other branch)", 0, 220, () => SetStatus(ui, CrossBranchLobby.OpenInvite()));
-        Spacer(ui, L, 0);
-        var xr = Row(ui, L, RowH);
-        Text(ui, xr, "Let them join", LabelX, ControlX - LabelX - 8);
-        ui.BranchOff = Btn(ui, xr, "Off", ControlX, 120, () => { CrossBranchLobby.Enabled = false; SetStatus(ui, "Other branch off"); RefreshStatic(ui); });
-        ui.BranchOn = Btn(ui, xr, "On", ControlX + 128, 120, () => { CrossBranchLobby.Enabled = true; SetStatus(ui, $"Other branch on: players on {CrossBranchLobby.OtherVersion()} can join with Invite (other branch). Experimental"); RefreshStatic(ui); });
-        ui.BranchHint = Hint(ui, L, "");
 
         // Discord
         Section(ui, L, "Discord", out _);
         Hint(ui, L, "Shown under 'Playing Schedule I' on your Discord profile while the game runs", LabelX);
         Spacer(ui, L, 4);
         DiscordRow(ui, L, "Rich presence", () => DiscordPresence.Enabled, v => DiscordPresence.Enabled = v);
+        ui.DiscordHint = Hint(ui, L, "");   // connection state, right under the switch it's about
         DiscordRow(ui, L, "Player count", () => DiscordPresence.ShowPlayers, v => DiscordPresence.ShowPlayers = v);
         DiscordRow(ui, L, "Lobby type", () => DiscordPresence.ShowLobbyType, v => DiscordPresence.ShowLobbyType = v);
         DiscordRow(ui, L, "Save name", () => DiscordPresence.ShowSaveName, v => DiscordPresence.ShowSaveName = v);
-        ui.DiscordHint = Hint(ui, L, "");
 
         // Whitelist
         L = ui.Pages[1].transform;
@@ -903,8 +977,7 @@ public static class HostSettingsMenu
 
         // Autosave
         L = ui.Pages[3].transform;
-        Section(ui, L, "Autosave", out var arow, first: true);
-        RightBtn(ui, arow, "Save now", 0, 140, () => { SetStatus(ui, AutoSave.SaveNow()); _nextRefresh = 0; });
+        Section(ui, L, "Autosave", out _, first: true);
         Spacer(ui, L, 0);
         var wr = Row(ui, L, RowH);
         Text(ui, wr, "World saves", LabelX, ControlX - LabelX - 8);
@@ -916,10 +989,72 @@ public static class HostSettingsMenu
         ui.PlayersOff = Btn(ui, pr, "Off", ControlX, 120, () => { AutoSave.PlayersEnabled = false; MelonPreferences.Save(); SetStatus(ui, "Player saves off"); RefreshStatic(ui); });
         ui.PlayersOn = Btn(ui, pr, "On", ControlX + 128, 120, () => { AutoSave.PlayersEnabled = true; MelonPreferences.Save(); SetStatus(ui, "Player saves on"); RefreshStatic(ui); });
         ui.PlayersEvery = SliderRow(ui, L, "Every", 10, 300, AutoSave.PlayerSeconds, out ui.PlayersValue, v => { AutoSave.PlayerSeconds = v; ui.PlayersValue.text = $"{v} s"; _prefsDirty = true; });
+        var sr = Row(ui, L, RowH);
+        Text(ui, sr, "Save everything", LabelX, ControlX - LabelX - 8);
+        Btn(ui, sr, "Save now", ControlX, 248, () => { SetStatus(ui, AutoSave.SaveNow()); _nextRefresh = 0; });
         ui.LastSave = Hint(ui, L, "");
+
+        // Experimental: large lobbies, then playing across Steam branches.
+        L = ui.Pages[4].transform;
+        Section(ui, L, "Large lobbies", out _, first: true);
+        Hint(ui, L, $"Host more than {LobbySize.NormalMax} players, up to {LobbySize.LargeMax}. Once your lobby is full, the invite button sends new players to an extra lobby that leads into the same game. Untested at this size: your connection and PC set the real limit. Turns off Other branches", LabelX);
+        Spacer(ui, L, 0);
+        var lr = Row(ui, L, RowH);
+        Text(ui, lr, "Enable large lobbies", LabelX, ControlX - LabelX - 8);
+        ui.LargeOff = Btn(ui, lr, "Off", ControlX, 120, () => { SetStatus(ui, LobbySize.SetLarge(false)); RefreshStatic(ui); });
+        ui.LargeOn = Btn(ui, lr, "On", ControlX + 128, 120, () => { SetStatus(ui, LobbySize.SetLarge(true)); RefreshStatic(ui); });
+        ui.LargeSize = SizeSlider(ui, L, "Large lobby size", LobbySize.NormalMax, LobbySize.LargeMax, out ui.LargeValue);
+        ui.LargeHint = Hint(ui, L, "");
+
+        Section(ui, L, "Other branches", out var xrow);
+        ui.BranchInvite = RightBtn(ui, xrow, "Invite (other branch)", 0, 220, () => SetStatus(ui, CrossBranchLobby.OpenInvite()));
+        Hint(ui, L, $"Let friends on {CrossBranchLobby.OtherBranchName()} join your game, without the mod. Invite them with the button, or they use Join Game twice: the first try shows Version Mismatch, the second within 15 s gets in. Back up your save first", LabelX);
+        Spacer(ui, L, 0);
+        var xr = Row(ui, L, RowH);
+        Text(ui, xr, "Accept other branches", LabelX, ControlX - LabelX - 8);
+        ui.BranchOff = Btn(ui, xr, "Off", ControlX, 120, () => { SetStatus(ui, CrossBranchLobby.SetEnabled(false)); RefreshStatic(ui); });
+        ui.BranchOn = Btn(ui, xr, "On", ControlX + 128, 120, () => { SetStatus(ui, CrossBranchLobby.SetEnabled(true)); RefreshStatic(ui); });
+        ui.BranchHint = Hint(ui, L, "");
 
         BottomFade(root);
         RefreshStatic(ui);
+    }
+
+    // A lobby size slider: the game's slider, re-laid on the control column. Both size sliders
+    // feed the same pending size, applied shortly after the drag ends (see Update).
+    private static Slider SizeSlider(Ui ui, Transform parent, string text, int min, int max, out TextMeshProUGUI value)
+    {
+        var sliderGo = UnityEngine.Object.Instantiate(ui.SliderT, parent);
+        sliderGo.name = text.Replace(" ", "");
+        var srt = sliderGo.GetComponent<RectTransform>();
+        srt.anchorMin = srt.anchorMax = new Vector2(0, 1); srt.pivot = new Vector2(0, 1);
+        srt.sizeDelta = new Vector2(ui.RowW, RowH);
+        var label = sliderGo.transform.Find("Label").GetComponent<TextMeshProUGUI>();
+        label.text = text;
+        Place(label.GetComponent<RectTransform>(), LabelX, ControlX - LabelX - 8, 30);
+        var slider = sliderGo.GetComponentInChildren<Slider>(true);
+        Place(slider.GetComponent<RectTransform>(), ControlX, 376, 20);
+        var v = slider.transform.Find("Value").GetComponent<TextMeshProUGUI>();
+        var vrt = v.GetComponent<RectTransform>();
+        vrt.anchorMin = vrt.anchorMax = new Vector2(1, 0.5f);
+        vrt.pivot = new Vector2(0, 0.5f);
+        vrt.anchoredPosition = new Vector2(16, 0);
+        vrt.sizeDelta = new Vector2(48, 30);
+        v.alignment = TextAlignmentOptions.MidlineLeft;
+        slider.onValueChanged = new Slider.SliderEvent();
+        slider.wholeNumbers = true;
+        slider.minValue = min;
+        slider.maxValue = max;
+        slider.SetValueWithoutNotify(Math.Clamp(LobbySize.MaxPlayers, min, max));
+        var valueText = v;
+        slider.onValueChanged.AddListener((UnityAction<float>)(f =>
+        {
+            _pendingSize = Mathf.RoundToInt(f);
+            _applySizeAt = Time.unscaledTime + 0.6f;
+            valueText.text = _pendingSize.ToString();
+        }));
+        value = v;
+        return slider;
     }
 
     // An Off/On pair like the autosave rows, bound to one Discord setting.
@@ -932,9 +1067,26 @@ public static class HostSettingsMenu
         ui.DiscordToggles.Add((off, on, get));
     }
 
+    // Status messages answer the last click, so they clear after a few seconds instead of
+    // lingering on every tab.
+    private const float StatusSeconds = 6f;
+    private static float _statusAt;
+
     private static void SetStatus(Ui ui, string s)
     {
         if (ui.Status != null) ui.Status.text = s ?? "";
+        _statusAt = Time.unscaledTime;
+    }
+
+    // A risky choice that's selected shows amber instead of the usual blue.
+    private static readonly Color Warn = new(0.85f, 0.58f, 0.18f, 1f);
+
+    private static void HighlightRisky(Button b, bool on)
+    {
+        var c = b.colors;
+        c.normalColor = on ? Warn : Grey;
+        c.selectedColor = c.normalColor;
+        b.colors = c;
     }
 
     private static void RefreshStatic(Ui ui)
@@ -946,12 +1098,13 @@ public static class HostSettingsMenu
         bool dEnabled = DiscordPresence.Enabled, dConnected = DiscordPresence.Status == "Connected", dSave = DiscordPresence.ShowSaveName;
         var dVals = new bool[ui.DiscordToggles.Count];
         for (int i = 0; i < dVals.Length; i++) dVals[i] = ui.DiscordToggles[i].get();
-        bool branch = CrossBranchLobby.Enabled;
-        string key = $"{privacy}|{_banLength?.Ticks}|{wl}|{worldOn}|{playersOn}|{dEnabled}|{dConnected}|{dSave}|{string.Join(",", dVals)}|{branch}";
+        bool branch = CrossBranchLobby.Enabled, large = LobbySize.LargeLobbies;
+        string key = $"{privacy}|{_banLength?.Ticks}|{wl}|{worldOn}|{playersOn}|{dEnabled}|{dConnected}|{dSave}|{string.Join(",", dVals)}|{branch}|{large}";
         if (key != ui.LastStaticKey)
         {
             ui.LastStaticKey = key;
-            foreach (var (b, m) in ui.PrivacyButtons) Highlight(b, privacy == m);
+            // Open lets strangers in: amber when it's the one selected.
+            foreach (var (b, m) in ui.PrivacyButtons) { if (m == LobbyPrivacy.Mode.Open) HighlightRisky(b, privacy == m); else Highlight(b, privacy == m); }
             foreach (var (b, len) in ui.BanLenButtons)
             {
                 bool on = len == _banLength;
@@ -978,10 +1131,16 @@ public static class HostSettingsMenu
                     : "Discord isn't running on this PC. It connects when it starts";
             Highlight(ui.PlayersOff, !playersOn);
             Highlight(ui.PlayersOn, playersOn);
-            Highlight(ui.BranchOff, !branch);
-            Highlight(ui.BranchOn, branch);
+            Highlight(ui.BranchOff, !branch || large);
+            HighlightRisky(ui.BranchOn, branch && !large);
+            ui.BranchOn.interactable = !large;      // large lobbies turn other branches off
+            ui.BranchInvite.interactable = branch && !large;
+            Highlight(ui.LargeOff, !large);
+            HighlightRisky(ui.LargeOn, large);
+            ui.LargeSize.interactable = large;
         }
         ui.BranchHint.text = CrossBranchLobby.StatusLine();
+        ui.LargeHint.text = CrossBranchLobby.LargeStatusLine();
         if (!_prefsDirty)
         {
             ui.WorldEvery.SetValueWithoutNotify(AutoSave.WorldMinutes);
@@ -996,12 +1155,18 @@ public static class HostSettingsMenu
         if (_pendingSize < 0)
         {
             ui.Size.SetValueWithoutNotify(LobbySize.MaxPlayers);
+            ui.Size.interactable = LobbySize.MaxPlayers <= LobbySize.NormalMax;   // past 250 it's set on Experimental
             ui.SizeValue.text = LobbySize.MaxPlayers.ToString();
+            ui.LargeSize.SetValueWithoutNotify(Math.Max(LobbySize.NormalMax, LobbySize.MaxPlayers));
+            ui.LargeValue.text = LobbySize.MaxPlayers > LobbySize.NormalMax ? LobbySize.MaxPlayers.ToString() : LobbySize.NormalMax.ToString();
         }
         int n = HostLobby.MemberCount();
-        ui.SizeHint.text = HostLobby.TryGet(out _)
+        ui.SizeHint.text = LobbySize.MaxPlayers > LobbySize.NormalMax
+            ? $"Lobby size is {LobbySize.MaxPlayers}, set on the Experimental tab. This slider goes up to {LobbySize.NormalMax}"
+            : HostLobby.TryGet(out _)
             ? $"Applies now. Lowest is {LobbySize.LiveMin} with {n} in the lobby"
             : "Applies to the next lobby you host";
+        FitHints(ui);
     }
 
     // --- Lists -----------------------------------------------------------------------------------
@@ -1113,7 +1278,9 @@ public static class HostSettingsMenu
     private static void RefreshLists(Ui ui, bool force)
     {
         // Saved crews
-        var crews = Crews.All;
+        // Showcase lists only made-up players, so screenshots never show your real friends or logs.
+        var crews = Showcase.On ? new List<Crews.Crew>() : new List<Crews.Crew>(Crews.All);
+        Showcase.AddCrews(crews);
         ui.CrewsHeading.text = Heading("Saved crews", crews.Count);
         var ck = string.Join("|", crews.Select(c => c.Name + ":" + c.Members.Count)) + "|" + ui.ConfirmDeleteCrew;
         if (force || ck != ui.LastCrewKey)
@@ -1124,6 +1291,7 @@ public static class HostSettingsMenu
             foreach (var c in crews)
             {
                 var crew = c;
+                bool showcase = crew.Members.Count > 0 && Showcase.IsFake(crew.Members[0].SteamId);
                 var r = Row(ui, ui.CrewList, RowH);
                 Text(ui, r, crew.Name, LabelX, ControlX - LabelX - 8, plain: true);
                 int shown = Math.Min(4, crew.Members.Count);
@@ -1132,10 +1300,11 @@ public static class HostSettingsMenu
                 if (crew.Members.Count > 2) names += $" +{crew.Members.Count - 2}";
                 float tx = ControlX + shown * 20 + 12;
                 Text(ui, r, names, tx, ui.RowW - tx - 220, Muted, 13, plain: true);
-                RightBtn(ui, r, "Load", 108, 100, () => { SetStatus(ui, Crews.Load(crew.Name)); ui.ConfirmDeleteCrew = ""; RefreshStatic(ui); _nextRefresh = 0; });
+                RightBtn(ui, r, "Load", 108, 100, () => { if (showcase) { SetStatus(ui, Showcase.Inert(crew.Name)); return; } SetStatus(ui, Crews.Load(crew.Name)); ui.ConfirmDeleteCrew = ""; RefreshStatic(ui); _nextRefresh = 0; });
                 bool confirming = ui.ConfirmDeleteCrew == crew.Name;
                 var del = RightBtn(ui, r, confirming ? "Confirm" : "Delete", 0, 100, () =>
                 {
+                    if (showcase) { SetStatus(ui, Showcase.Inert(crew.Name)); return; }
                     if (ui.ConfirmDeleteCrew == crew.Name) { Crews.Delete(crew.Name); ui.ConfirmDeleteCrew = ""; SetStatus(ui, $"Deleted {crew.Name}"); }
                     else { ui.ConfirmDeleteCrew = crew.Name; SetStatus(ui, $"Click Confirm to delete {crew.Name}"); }
                     _nextRefresh = 0;
@@ -1162,7 +1331,7 @@ public static class HostSettingsMenu
                 var row = p;
                 // Players with BiggerLobbies said hello: their version, and any mods that differ from yours.
                 ModHandshake.Hello? hello = null;
-                if (row.SteamId != 0 && ModHandshake.TryGet(row.SteamId, out var h)) hello = h;
+                if (row.SteamId != 0 && (Showcase.TryHello(row.SteamId, out var h) || ModHandshake.TryGet(row.SteamId, out h))) hello = h;
                 string diff = hello == null ? "" : ModsLine(hello);
                 var r = Row(ui, ui.Players, diff.Length > 0 ? 48 : RowH);
                 Avatar(r, row.SteamId, Playing);
@@ -1197,7 +1366,8 @@ public static class HostSettingsMenu
         }
 
         // Left the game
-        var gone = DepartedPlayers.List();
+        var gone = Showcase.On ? new List<DepartedPlayers.Info>() : new List<DepartedPlayers.Info>(DepartedPlayers.List());
+        Showcase.AddDeparted(gone);
         ui.DepartedHeading.text = Heading("Left the game", gone.Count);
         var dk = string.Join("|", gone.Select(g => $"{g.SteamId}:{g.Cash:0}:{string.Join(",", g.Items.Select(i => i.Id + i.Quantity))}:{(g.Compare == null ? "" : DepartedPlayers.CompareLine(g.Compare))}")) + InstanceFinder.IsServer;
         if (force || dk != ui.LastDepartedKey)
@@ -1212,6 +1382,7 @@ public static class HostSettingsMenu
                 var who = g;
                 // With a record of what they left with, a third line compares it with their save.
                 bool cmp = who.Compare != null;
+                TextMeshProUGUI? compareLine = null;
                 var r = Row(ui, ui.Departed, cmp ? 70 : 48);
                 Avatar(r, who.SteamId, null);
                 var nm = Text(ui, r, who.Name, NameX, 150, plain: true);
@@ -1223,19 +1394,26 @@ public static class HostSettingsMenu
                 {
                     var cl = Text(ui, r, DepartedPlayers.CompareLine(who.Compare!), NameX, ui.RowW - NameX - 12, who.Compare!.Matches ? Muted : Blocked, 11, plain: true);
                     cl.GetComponent<RectTransform>().anchoredPosition = new Vector2(NameX, -24);
+                    compareLine = cl;
                 }
                 float x = NameX + 158;
                 int shown = Math.Min(6, who.Items.Count);
                 for (int i = 0; i < shown; i++) { ItemChip(ui, r, who.Items[i], x); x += 34; }
                 if (who.Items.Count > shown) { Text(ui, r, $"+{who.Items.Count - shown}", x + 2, 36, Muted, 12); x += 40; }
                 if (who.Cash >= 0.01f) Text(ui, r, $"${who.Cash:N0}", x + 4, ui.RowW - x - 150, Playing, 13);
-                RightBtn(ui, r, "Take items", 0, 130, () => { SetStatus(ui, DepartedPlayers.Take(who.SteamId)); DepartedPlayers.Invalidate(); _nextRefresh = 0; });
+                RightBtn(ui, r, "Take items", 0, 130, () =>
+                {
+                    if (Showcase.IsFake(who.SteamId)) { SetStatus(ui, Showcase.Inert(who.Name)); return; }
+                    SetStatus(ui, DepartedPlayers.Take(who.SteamId)); DepartedPlayers.Invalidate(); _nextRefresh = 0;
+                });
+                if (compareLine != null) WrapCompareLine(r, compareLine);
             }
             Stripe(ui.Departed); Relayout(ui, ui.Departed);
         }
 
         // Taken items
-        var log = DepartedPlayers.History();
+        var log = Showcase.On ? new List<DepartedPlayers.Taken>() : new List<DepartedPlayers.Taken>(DepartedPlayers.History());
+        Showcase.AddTaken(log);
         ui.TakenHeading.text = Heading("Taken items", log.Count);
         var tk = string.Join("|", log.Select(t => $"{t.Utc.Ticks}:{t.Record?.AllReturned}"));
         if (force || tk != ui.LastTakenKey)
@@ -1253,13 +1431,15 @@ public static class HostSettingsMenu
                 Text(ui, r, who, LabelX + 28, 150, plain: true);
                 // Takes with a record get Give back; give backs and older takes are just listed.
                 float btn = t.Record != null ? 120 : 0;
-                Text(ui, r, t.Summary, LabelX + 186, ui.RowW - LabelX - 186 - 112 - btn, Muted, 13, plain: true);
+                var summary = Text(ui, r, t.Summary, LabelX + 186, ui.RowW - LabelX - 186 - 112 - btn, Muted, 13, plain: true);
+                WrapFit(summary, r, RowH, 12);   // every item, over as many lines as it takes
                 var when = Text(ui, r, TakenAgo(t.Utc), ui.RowW - 104 - btn, 96, Muted, 12);
                 when.alignment = TextAlignmentOptions.MidlineRight;
                 ui.TakenWhen.Add((when, t.Utc));
                 if (t.Record == null) continue;
                 var gb = RightBtn(ui, r, "Give back", 0, 112, () =>
                 {
+                    if (Showcase.IsFake(entry.SteamId)) { SetStatus(ui, Showcase.Inert(entry.Name)); return; }
                     SetStatus(ui, DepartedPlayers.GiveBack(entry, msg => { SetStatus(ui, msg); DepartedPlayers.Invalidate(); _nextRefresh = 0; }));
                     _nextRefresh = 0;
                 });
@@ -1275,7 +1455,8 @@ public static class HostSettingsMenu
         foreach (var (t, utc) in ui.TakenWhen) SetAgo(t, TakenAgo(utc));
 
         // Whitelist
-        var wlPlayers = Whitelist.Players;
+        var wlPlayers = Showcase.On ? new List<BanList.Entry>() : new List<BanList.Entry>(Whitelist.Players);
+        Showcase.AddWhitelist(wlPlayers);
         bool wlOn = Whitelist.Enabled;
         ui.WhiteHeading.text = Heading("Whitelist", wlPlayers.Count);
         var wk = string.Join("|", ListKey(wlPlayers)) + wlOn + "|" + string.Join(",", PresenceKey(wlPlayers));
@@ -1294,13 +1475,18 @@ public static class HostSettingsMenu
                 var st = Friends.StateOf(id);
                 if (st == Friends.Presence.Playing) nt.color = Playing;
                 else if (st == Friends.Presence.Offline) nt.color = Muted;
-                RightBtn(ui, r, "Remove", 0, 100, () => { Whitelist.Remove(id); SetStatus(ui, $"Removed {name} from the whitelist"); _nextRefresh = 0; });
+                RightBtn(ui, r, "Remove", 0, 100, () =>
+                {
+                    if (Showcase.IsFake(id)) { SetStatus(ui, Showcase.Inert(name)); return; }
+                    Whitelist.Remove(id); SetStatus(ui, $"Removed {name} from the whitelist"); _nextRefresh = 0;
+                });
             }
             Stripe(ui.White); Relayout(ui, ui.White);
         }
 
         // Banned players (the time left is updated in place, so the countdown isn't part of the key)
-        var bans = BanList.Bans;
+        var bans = Showcase.On ? new List<BanList.Entry>() : new List<BanList.Entry>(BanList.Bans);
+        Showcase.AddBans(bans);
         ui.BlackHeading.text = Heading("Banned", bans.Count);
         var bk = string.Join("|", BanKey(bans));
         if (force || bk != ui.LastBlackKey)
@@ -1318,7 +1504,11 @@ public static class HostSettingsMenu
                 Text(ui, r, name, NameX, hasReason ? 170 : 312, plain: true);
                 if (hasReason) Text(ui, r, e.Reason, NameX + 176, 190, Muted, 12, plain: true);
                 ui.BanLeft[id] = Text(ui, r, BanList.Remaining(e), NameX + 372, 150, e.Permanent ? Blocked : Muted, 13);
-                RightBtn(ui, r, "Unban", 0, 100, () => { BanList.Unban(id); SetStatus(ui, $"Unbanned {name}"); _nextRefresh = 0; });
+                RightBtn(ui, r, "Unban", 0, 100, () =>
+                {
+                    if (Showcase.IsFake(id)) { SetStatus(ui, Showcase.Inert(name)); return; }
+                    BanList.Unban(id); SetStatus(ui, $"Unbanned {name}"); _nextRefresh = 0;
+                });
             }
             Stripe(ui.Black); Relayout(ui, ui.Black);
         }
@@ -1556,6 +1746,43 @@ public static class HostSettingsMenu
 
     // --- Open / update -------------------------------------------------------------------------------
 
+    // --- DebugTour hooks: open Host settings, show a tab, close, without the keyboard ---
+    internal static int TourTabCount => TabNames.Length;
+    internal static string TourTabName(int i) => TabNames[i];
+
+    /// <summary>Opens Host settings on the pause menu (in a save) or the main menu. False if it isn't ready.</summary>
+    internal static bool TourOpen(bool inGame)
+    {
+        var ui = inGame ? _pause : _menu;
+        if (ui == null) return false;
+        if (inGame) { var pm = Singleton<PauseMenu>.Instance; if (pm != null && !pm.IsPaused) pm.Pause(); }
+        Open(ui);
+        return true;
+    }
+
+    internal static void TourTab(bool inGame, int i)
+    {
+        var ui = inGame ? _pause : _menu;
+        if (ui != null) { ShowTab(ui, i); RefreshStatic(ui); RefreshLists(ui, true); }
+    }
+
+    /// <summary>Scrolls the open tab to the bottom; false when it all fits without scrolling.</summary>
+    internal static bool TourScrollBottom(bool inGame)
+    {
+        var ui = inGame ? _pause : _menu;
+        var sr = ui?.Layout.GetComponentInParent<ScrollRect>();
+        if (sr == null || sr.content == null || sr.viewport == null) return false;
+        if (sr.content.rect.height <= sr.viewport.rect.height + 4) return false;
+        sr.verticalNormalizedPosition = 0f;
+        return true;
+    }
+
+    internal static void TourClose(bool inGame)
+    {
+        var ui = inGame ? _pause : _menu;
+        if (ui != null) CloseAll(ui);
+    }
+
     private static void Open(Ui ui)
     {
         ui.ConfirmBlacklist = 0;
@@ -1601,8 +1828,11 @@ public static class HostSettingsMenu
                 if (u != null) { try { SetStatus(u, msg); RefreshStatic(u); } catch { } }
         }
         if (_prefsDirty && !dragging) { _prefsDirty = false; MelonPreferences.Save(); }
+        if (Time.unscaledTime - _statusAt > StatusSeconds)
+            foreach (var u in new[] { _pause, _menu })
+                if (u?.Status != null && u.Status.text.Length > 0) u.Status.text = "";
         if (ui == null) return;
-        if (_pendingSize >= 0) ui.SizeValue.text = _pendingSize.ToString();
+        if (_pendingSize >= 0) { ui.SizeValue.text = _pendingSize.ToString(); ui.LargeValue.text = _pendingSize.ToString(); }
 
         if (Time.unscaledTime >= _nextRefresh)
         {

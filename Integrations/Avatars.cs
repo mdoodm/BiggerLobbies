@@ -21,6 +21,12 @@ public static class Avatars
         img.color = new Color(0.25f, 0.25f, 0.25f, 1f);
         img.texture = null;
         if (id == 0) return;
+        if (Showcase.TryFace(id, out var face))
+        {
+            _pending.RemoveAll(p => p.img == img);
+            ShowSprite(img, face);
+            return;
+        }
         var tex = Get(id);
         if (tex != null) Apply(img, tex);
         else
@@ -29,6 +35,16 @@ public static class Avatars
             _pending.RemoveAll(p => p.img == img);
             _pending.Add((img, id, 0));
         }
+    }
+
+    /// <summary>Shows a sprite (an NPC portrait, possibly from an atlas) on a RawImage.</summary>
+    public static void ShowSprite(RawImage img, Sprite face)
+    {
+        var tex = face.texture;
+        var r = face.textureRect;
+        img.texture = tex;
+        img.color = Color.white;
+        img.uvRect = new Rect(r.x / tex.width, r.y / tex.height, r.width / tex.width, r.height / tex.height);
     }
 
     private static void Apply(RawImage img, Texture2D tex)
