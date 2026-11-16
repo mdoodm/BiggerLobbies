@@ -14,6 +14,9 @@ All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. 
 - Build: one codebase for both builds, with every backend difference in `Utils/Shim.cs` and `Utils/GlobalUsings.cs`. The `Mono` configuration is back. Harmony patches are applied after the backend check rather than automatically. `Il2CppLobbyPatches.cs` is now `LobbyPatches.cs`.
 - Bug reports ask which game branch you're on.
 
+### Fixed
+- Host settings is now in the pause menu during the tutorial too. It was only added in a normal save.
+
 ## 2.0.3
 
 ### Security
