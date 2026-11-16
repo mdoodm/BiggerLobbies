@@ -38,7 +38,7 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 - **Saving.** How often the world and each player save, plus a Save now button.
 - **Discord.** Your profile shows "Hosting a lobby, Friends only (3 of 20)" under Playing Schedule I. Player count, lobby type and save name can each be turned off; the save name is off by default.
 
-Settings that let more people in, or are still being tested, turn amber when they're on. The bottom-left corner of your screen shows which version of BiggerLobbies is running.
+Settings that let more people in, or are experimental, turn amber when they're on. The bottom-left corner of your screen shows which version of BiggerLobbies is running.
 
 <details>
 <summary><b>More screenshots</b></summary>
@@ -55,7 +55,7 @@ The players in these screenshots are the game's own characters, put there by a [
 
 ## Experimental
 
-Two features are still being tested. Both are off by default, on the **Experimental** tab of Host settings, and only one can be on at a time.
+Two features are experimental. Both are off by default, on the **Experimental** tab of Host settings, and only one can be on at a time.
 
 - **Large lobbies.** Go past 250 players, up to 748. Once your lobby is full, your invite button sends new players to an extra lobby that leads into the same game.
 - **Other branches.** Friends on the other Steam branch join your game, without the mod.

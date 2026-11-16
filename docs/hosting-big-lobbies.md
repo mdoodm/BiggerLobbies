@@ -19,7 +19,7 @@ Only the host's setting counts. Friends don't need to change anything, or instal
 
 ## Past 250 (experimental)
 
-Steam caps one lobby at 250 people. The experimental **large lobbies** take you up to 748 with extra lobbies that lead into the same game. See [Experimental features](experimental.md#large-lobbies) for how it works, and what's been tested so far.
+Steam caps one lobby at 250 people. The experimental **large lobbies** take you up to 748 with extra lobbies that lead into the same game. See [Experimental features](experimental.md#large-lobbies) for how it works.
 
 ## What players see
 
@@ -63,7 +63,6 @@ The more people join, the more likely someone causes trouble. Host settings has 
 - **Lobby screen:** checked with 40 and 100 slots.
 - **A crowd on the host:** a save ran with 250 simulated players walking around at a playable frame rate.
 - **Host settings:** the Players tab stayed smooth with 250 test players listed.
-- **Large lobbies:** both extra lobbies opened next to the main one, on a default-branch host on its own. Nobody has joined through one yet.
 
 ## Tell us how it went
 

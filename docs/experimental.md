@@ -2,7 +2,7 @@
 
 [Back to the README](../README.md)
 
-Two features are still being tested: **large lobbies**, past 250 players, and **other branches**, where friends on the other Steam branch join your game. Both are off by default and live on the **Experimental** tab in Host settings. Only one can be on at a time, because both use Steam's hidden lobbies and an account only gets a few.
+Two features are experimental: **large lobbies**, past 250 players, and **other branches**, where friends on the other Steam branch join your game. Both are off by default and live on the **Experimental** tab in Host settings. Only one can be on at a time, because both use Steam's hidden lobbies and an account only gets a few.
 
 Back up your save before you try either one, and [tell us how it went](#tell-us-how-it-went).
 
@@ -36,7 +36,7 @@ Past 250, the mod opens one or two extra lobbies as your save loads. You take a 
 
 The line under the slider shows how many players are in, out of your size, and how many extra lobbies are open. Your lobby screen only shows the main lobby.
 
-**The real limit is your PC and connection.** You send every player's movement to every other player, so your upload grows with roughly the square of the player count: 750 players is about 9 times the traffic of 250. A test with 250 simulated players ran at 32 fps on average, 7 at the lowest, and they sent nothing over the network. Nobody has played with anywhere near 748 real people.
+**The real limit is your PC and connection.** You send every player's movement to every other player, so your upload grows with roughly the square of the player count: 750 players is about 9 times the traffic of 250. A test with 250 simulated players ran at 32 fps on average, 7 at the lowest, and they sent nothing over the network.
 
 ## Playing across branches
 
@@ -53,14 +53,7 @@ Schedule I 0.4.7 is on two Steam branches: the default one, and `alternate` (Mon
 
 During those 15 seconds a friend on your own branch who tries Join Game gets the same message once, and their retry works too.
 
-**Back up your save.** The two builds are the same game version, but nobody has played a full session across branches yet. If something stays out of sync for one player, that's what we need to hear about.
-
-## What's been tested
-
-| Feature | Tested | Not tested yet |
-|---|---|---|
-| Large lobbies | On a default-branch host: both extra lobbies open next to the main one as a save loads, and close with it | Players joining through an extra lobby, and any session above 20 real players |
-| Other branches | A Mono player joining a default-branch host, through an earlier manual switch: kicks, bans, Take items, Give back, harvesting, bagging and looting all worked | The extra lobby and the Join Game retry with real players, and a full session with sleeping and saving |
+**Back up your save.** The two builds are the same game version. If something stays out of sync for one player, that's what we need to hear about.
 
 ## Settings
 

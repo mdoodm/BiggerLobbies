@@ -5,7 +5,7 @@ All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. 
 ## 2.2.0
 
 ### Added
-- **Large lobbies (experimental, off by default).** Lobby sizes up to 748, on the Experimental tab or with `ExperimentalLargeLobbies`. Steam caps one lobby at 250, so past that, up to two extra lobbies open that lead into the same game and share your lobby size. You take a place in each lobby you host, so 748 is the most three can hold. Once your lobby is full, the invite button invites into an extra lobby; Steam's Join Game only reaches the main one. Large lobbies turn off other branches. Tested on a default-branch host on its own (both extra lobbies open and close with the save); nobody has joined through one yet. See [Experimental features](docs/experimental.md).
+- **Large lobbies (experimental, off by default).** Lobby sizes up to 748, on the Experimental tab or with `ExperimentalLargeLobbies`. Steam caps one lobby at 250, so past that, up to two extra lobbies open that lead into the same game and share your lobby size. You take a place in each lobby you host, so 748 is the most three can hold. Once your lobby is full, the invite button invites into an extra lobby; Steam's Join Game only reaches the main one. Large lobbies turn off other branches. See [Experimental features](docs/experimental.md).
 - **Experimental tab** in Host settings, for large lobbies and other branches. Other branches was on the Lobby tab, and now has an **Accept other branches** switch there.
 - **Version label.** The bottom-left corner of your screen, and of Host settings, shows which version of BiggerLobbies is running.
 - Testing tools: `DebugShowcase` fills Host settings with made-up players (random NPCs from your save, with their portraits) for screenshots, and hides your real players, bans and logs while it's on. `DebugTour` runs the menus by itself and saves screenshots to `UserData/BiggerLobbies/Tour`. See [Testing tools](docs/hosting-big-lobbies.md#testing-tools).
@@ -14,7 +14,7 @@ All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. 
 - Host settings:
   - Status messages sit at the bottom of the window and clear after a few seconds.
   - Help text wraps instead of being cut off, and so do the full list of what was taken and the save comparison under a player who left.
-  - Settings that let more people in, or are still being tested (Open privacy, large lobbies, other branches), show amber when they're on.
+  - Settings that let more people in, or are experimental (Open privacy, large lobbies, other branches), show amber when they're on.
   - Buttons that can't do anything right now are greyed out, and the Lobby tab's size slider stops at 250.
   - The Discord connection note sits under Rich presence, and Save now is its own row on the Saving tab.
 - An extra lobby that's no longer needed (other branches or large lobbies turned off, or the size lowered) stops taking new players and closes once it's empty, instead of closing with players still in it.
