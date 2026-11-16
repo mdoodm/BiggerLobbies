@@ -19,8 +19,8 @@ body:
     id: version
     attributes:
       label: BiggerLobbies version
-      description: Shown near the top of `MelonLoader\Latest.log`, for example `BiggerLobbies v2.1.0` or `BiggerLobbies (Mono) v2.1.0`.
-      placeholder: 2.1.0
+      description: Shown near the top of `MelonLoader\Latest.log`, for example `BiggerLobbies v2.2.0` or `BiggerLobbies (Mono) v2.2.0`.
+      placeholder: 2.2.0
     validations:
       required: true
   - type: dropdown
@@ -34,6 +34,16 @@ body:
         - Not sure
     validations:
       required: true
+  - type: dropdown
+    id: experimental
+    attributes:
+      label: Experimental features
+      description: Anything turned on in Host settings, on the Experimental tab.
+      multiple: true
+      options:
+        - None
+        - Large lobbies (past 250)
+        - Other branches
   - type: input
     id: players
     attributes:

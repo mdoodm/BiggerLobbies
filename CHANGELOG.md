@@ -2,25 +2,27 @@
 
 All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. Only the host needs the mod. Up to 2.0.3 they were for the default (Il2Cpp) branch only; from 2.1.0 there's a build for each branch.
 
-## Unreleased
+## 2.2.0
 
 ### Added
-- **Large lobbies (experimental, off by default).** On the Experimental tab, or with `ExperimentalLargeLobbies`: lobby sizes up to 748. Steam caps one lobby at 250, so past that, up to two hidden overflow lobbies open and share your lobby size. You take a place in each, so 748 is the most three lobbies hold. Once your lobby is full, the game's invite button invites into an overflow lobby. Steam's Join Game only leads to the main lobby. Large lobbies turn off other branches. Untested with more than a handful of players.
-
-- **Version label.** The bottom-left corner of your screen, and of Host settings, shows which BiggerLobbies version is running.
-- Testing tools: `DebugShowcase` fills Host settings with made-up players (random NPCs from your save, with their portraits) for screenshots, and hides your real players, bans and logs while it's on. `DebugTour` runs the menus by itself and saves screenshots to `UserData/BiggerLobbies/Tour`.
+- **Large lobbies (experimental, off by default).** Lobby sizes up to 748, on the Experimental tab or with `ExperimentalLargeLobbies`. Steam caps one lobby at 250, so past that, up to two extra lobbies open that lead into the same game and share your lobby size. You take a place in each lobby you host, so 748 is the most three can hold. Once your lobby is full, the invite button invites into an extra lobby; Steam's Join Game only reaches the main one. Large lobbies turn off other branches. Tested on a default-branch host on its own (both extra lobbies open and close with the save); nobody has joined through one yet. See [Experimental features](docs/experimental.md).
+- **Experimental tab** in Host settings, for large lobbies and other branches. Other branches was on the Lobby tab, and now has an **Accept other branches** switch there.
+- **Version label.** The bottom-left corner of your screen, and of Host settings, shows which version of BiggerLobbies is running.
+- Testing tools: `DebugShowcase` fills Host settings with made-up players (random NPCs from your save, with their portraits) for screenshots, and hides your real players, bans and logs while it's on. `DebugTour` runs the menus by itself and saves screenshots to `UserData/BiggerLobbies/Tour`. See [Testing tools](docs/hosting-big-lobbies.md#testing-tools).
 
 ### Changed
 - Host settings:
-  - Status messages sit at the bottom of the window and clear after a few seconds. Before, they covered the end of the tab bar and blocked clicks on the last tab.
-  - Help text wraps instead of being cut off, and so does the full list of what was taken and the save comparison under a player who left.
-  - Settings that could cause trouble (Open privacy, large lobbies, other branches) show amber when they're on.
-  - Buttons that do nothing right now are greyed out.
+  - Status messages sit at the bottom of the window and clear after a few seconds.
+  - Help text wraps instead of being cut off, and so do the full list of what was taken and the save comparison under a player who left.
+  - Settings that let more people in, or are still being tested (Open privacy, large lobbies, other branches), show amber when they're on.
+  - Buttons that can't do anything right now are greyed out, and the Lobby tab's size slider stops at 250.
   - The Discord connection note sits under Rich presence, and Save now is its own row on the Saving tab.
-  - Plainer wording on the Experimental tab.
-- Docs: a new [Experimental features](docs/experimental.md) page covers large lobbies and other branches, with what's been tested so far. The README shows real screenshots of Host settings, and the testing tools moved to [Hosting big lobbies](docs/hosting-big-lobbies.md#testing-tools).
-- An extra lobby that's no longer needed (other branches or large lobbies turned off, or the size lowered) stops taking new players and closes once it's empty, instead of closing with players in it.
-- Other branch has its own **Experimental** tab in Host settings, with an **Accept other branches** switch and the Invite (other branch) button. It was on the Lobby tab.
+- An extra lobby that's no longer needed (other branches or large lobbies turned off, or the size lowered) stops taking new players and closes once it's empty, instead of closing with players still in it.
+- Docs: a new [Experimental features](docs/experimental.md) page, real screenshots of Host settings in the README, and every testing tool described in one place.
+
+### Fixed
+- Other branches: if Steam answered the request for the extra lobby late, the game could take that lobby for your main one, or leave a lobby you'd just joined. Each extra lobby is now matched to its own request.
+- Other branches: a mid-game join through the extra lobby could count kicked players who were still in the Steam lobby, and load twice.
 
 ## 2.1.0
 

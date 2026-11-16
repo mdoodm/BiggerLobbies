@@ -14,7 +14,7 @@
 #else
         public const string MELON_NAME = MOD_NAME;
 #endif
-        public const string MOD_VERSION = "2.1.0";
+        public const string MOD_VERSION = "2.2.0";
         public const string MOD_AUTHOR = "Bars";
 
         /// <summary>Shown in the bottom-left corner of the screen and of Host settings.</summary>

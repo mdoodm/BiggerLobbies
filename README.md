@@ -90,7 +90,7 @@ Get-FileHash .\BiggerLobbies_*.dll -Algorithm SHA256
 
 ## Settings
 
-Everything is on by default, and most of it is easier to change in **Host settings**. To edit the file instead, open `UserData\MelonPreferences.cfg` after the first launch, change values under `[BiggerLobbies]`, then restart the game.
+Everything is on by default except the experimental features and the testing tools, and most of it is easier to change in **Host settings**. To edit the file instead, open `UserData\MelonPreferences.cfg` after the first launch, change values under `[BiggerLobbies]`, then restart the game.
 
 <details>
 <summary><b>All settings</b></summary>
