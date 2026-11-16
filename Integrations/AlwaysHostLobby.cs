@@ -85,6 +85,7 @@ public static class AlwaysHostLobby
     [HarmonyPostfix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyCreated))]
     private static void OnLobbyCreated_Postfix(SteamLobbyService __instance, LobbyCreated_t result)
     {
+        if (CrossBranchLobby.Handling) return;
         if (!_waiting)
         {
             if (Abandoned && _expectLate && result.m_eResult == EResult.k_EResultOK)
@@ -107,6 +108,7 @@ public static class AlwaysHostLobby
     private static void OnLobbyEntered_Postfix(SteamLobbyService __instance, LobbyEnter_t result)
     {
         // Only our own abandoned lobby: a friend's lobby joined via invite has a different id.
+        if (CrossBranchLobby.Handling) return;
         if (!_waiting && Abandoned && _abandonedId != 0 && result.m_ulSteamIDLobby == _abandonedId) LeaveAbandonedLobby(__instance);
     }
 

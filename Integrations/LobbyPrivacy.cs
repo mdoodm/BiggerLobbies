@@ -49,6 +49,7 @@ public static class LobbyPrivacy
     [HarmonyPrefix, HarmonyPriority(Priority.First), HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.CreateLobby))]
     private static void CreateLobby_Prefix(ref ELobbyType eLobbyType)
     {
+        if (CrossBranchLobby.Creating) return;   // the other-branch lobby stays invisible
         var want = SteamType(Current);
         if (eLobbyType != want)
         {

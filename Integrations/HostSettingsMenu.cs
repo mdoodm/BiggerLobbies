@@ -74,6 +74,8 @@ public static class HostSettingsMenu
         public Button WorldOff = null!, WorldOn = null!, PlayersOff = null!, PlayersOn = null!;
         public readonly List<(Button off, Button on, Func<bool> get)> DiscordToggles = new();
         public TextMeshProUGUI? DiscordHint;
+        public Button BranchOff = null!, BranchOn = null!;
+        public TextMeshProUGUI BranchHint = null!;
         public Slider WorldEvery = null!, PlayersEvery = null!;
         public TextMeshProUGUI WorldValue = null!, PlayersValue = null!, LastSave = null!;
         public readonly Dictionary<int, TextMeshProUGUI> PingTexts = new();
@@ -811,6 +813,16 @@ public static class HostSettingsMenu
         }));
         ui.SizeHint = Hint(ui, L, "");
 
+        // Cross-branch: a second lobby for players on the other Steam branch.
+        Section(ui, L, "Other branch", out var xrow);
+        RightBtn(ui, xrow, "Invite (other branch)", 0, 220, () => SetStatus(ui, CrossBranchLobby.OpenInvite()));
+        Spacer(ui, L, 0);
+        var xr = Row(ui, L, RowH);
+        Text(ui, xr, "Let them join", LabelX, ControlX - LabelX - 8);
+        ui.BranchOff = Btn(ui, xr, "Off", ControlX, 120, () => { CrossBranchLobby.Enabled = false; SetStatus(ui, "Other branch off"); RefreshStatic(ui); });
+        ui.BranchOn = Btn(ui, xr, "On", ControlX + 128, 120, () => { CrossBranchLobby.Enabled = true; SetStatus(ui, $"Other branch on: players on {CrossBranchLobby.OtherVersion()} can join with Invite (other branch). Experimental"); RefreshStatic(ui); });
+        ui.BranchHint = Hint(ui, L, "");
+
         // Discord
         Section(ui, L, "Discord", out _);
         Hint(ui, L, "Shown under 'Playing Schedule I' on your Discord profile while the game runs", LabelX);
@@ -934,7 +946,8 @@ public static class HostSettingsMenu
         bool dEnabled = DiscordPresence.Enabled, dConnected = DiscordPresence.Status == "Connected", dSave = DiscordPresence.ShowSaveName;
         var dVals = new bool[ui.DiscordToggles.Count];
         for (int i = 0; i < dVals.Length; i++) dVals[i] = ui.DiscordToggles[i].get();
-        string key = $"{privacy}|{_banLength?.Ticks}|{wl}|{worldOn}|{playersOn}|{dEnabled}|{dConnected}|{dSave}|{string.Join(",", dVals)}";
+        bool branch = CrossBranchLobby.Enabled;
+        string key = $"{privacy}|{_banLength?.Ticks}|{wl}|{worldOn}|{playersOn}|{dEnabled}|{dConnected}|{dSave}|{string.Join(",", dVals)}|{branch}";
         if (key != ui.LastStaticKey)
         {
             ui.LastStaticKey = key;
@@ -965,7 +978,10 @@ public static class HostSettingsMenu
                     : "Discord isn't running on this PC. It connects when it starts";
             Highlight(ui.PlayersOff, !playersOn);
             Highlight(ui.PlayersOn, playersOn);
+            Highlight(ui.BranchOff, !branch);
+            Highlight(ui.BranchOn, branch);
         }
+        ui.BranchHint.text = CrossBranchLobby.StatusLine();
         if (!_prefsDirty)
         {
             ui.WorldEvery.SetValueWithoutNotify(AutoSave.WorldMinutes);

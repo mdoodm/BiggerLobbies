@@ -8,9 +8,12 @@ All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. 
 - **Mono build** for the `alternate` Steam branch: `BiggerLobbies_Mono.dll`, with every feature of the Il2Cpp build. It shows as `BiggerLobbies (Mono)` in the log, and uses the same settings, bans, crews and `UserData/BiggerLobbies` files. Tested solo on 0.4.7f12 Alternate (lobby, Host settings, hosting, autosave, Take items and Give back), not yet with other players.
 - Both DLLs can sit in `Mods` together: MelonLoader loads the one for your branch and skips the other. On the `alternate` branch the skipped Il2Cpp DLL shows a harmless load error.
 - If a DLL ever runs on the wrong branch, it says so in the log and does nothing else.
+- **Other branch (experimental, off by default).** Friends on the other Steam branch can join your game, with no mod on their side. Turn it on in Host settings, on the Lobby tab, or with `CrossBranchLobby`. While you host, a second, hidden lobby set to the other branch's version opens next to yours. It copies your lobby's state, chat messages and kick notices, and closes when you stop hosting. **Invite (other branch)** invites friends into it. Steam's Join Game can only lead to your main lobby, so a friend on the other branch who uses it sees "Version Mismatch" once, and your lobby then accepts their branch for 15 seconds so their second try works. Both lobbies share your lobby size. A join from the Mono branch into an Il2Cpp host has been tested with kicks, bans, Take items, Give back, harvesting, bagging and looting. The second lobby itself is new in this release and not yet tested with other players.
+- `DebugCrossBranchKey`: a testing switch that flips your lobby between the two branches by hand.
 
 ### Changed
-- Everyone in a lobby must still be on the same branch: the game refuses a player from the other one with "Version Mismatch". The docs now say so.
+- Without **Other branch**, everyone in a lobby must still be on the same branch: the game refuses a player from the other one with "Version Mismatch". The docs now say so.
+- Build: source and PDB paths in the DLLs are mapped to `/_/`, so builds don't contain the path they were built in.
 - Build: one codebase for both builds, with every backend difference in `Utils/Shim.cs` and `Utils/GlobalUsings.cs`. The `Mono` configuration is back. Harmony patches are applied after the backend check rather than automatically. `Il2CppLobbyPatches.cs` is now `LobbyPatches.cs`.
 - Bug reports ask which game branch you're on.
 

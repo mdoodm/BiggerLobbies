@@ -94,6 +94,7 @@ public static class LobbyHarmonyPatches
     {
         try
         {
+            if (CrossBranchLobby.Handling) return;   // it copies the main lobby's limits itself
             if (result.m_eResult != EResult.k_EResultOK) return;
             var id = new CSteamID(result.m_ulSteamIDLobby);
             string n = LobbySize.MaxPlayers.ToString();

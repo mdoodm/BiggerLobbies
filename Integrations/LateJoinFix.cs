@@ -19,6 +19,7 @@ public static class LateJoinFix
 {
     private static MelonPreferences_Entry<bool>? _enabled;
     private static bool _pending;
+    public static bool Enabled => _enabled?.Value ?? true;
     private static float _lastSend = -999f;
     private const float FirstDelay = 2f;   // let the newcomer finish entering the lobby
     private const float MinSpacing = 5f;   // never send "ready" more often than this
@@ -36,6 +37,7 @@ public static class LateJoinFix
         {
             try
             {
+                if (CrossBranchLobby.Handling) return;   // the second lobby re-sends its own
                 if (_enabled == null || !_enabled.Value || !__instance.IsHost) return;
                 if ((result.m_rgfChatMemberStateChange & 0x1u) == 0) return; // 1 = member entered
                 var load = Singleton<LoadManager>.Instance;
@@ -70,7 +72,8 @@ public static class LateJoinFix
             }
             _lastSend = UnityEngine.Time.realtimeSinceStartup;
             svc.SetLobbyData("ready", "true");
-            svc.SendMessage("ready");
+            // Only this lobby: in the second lobby an extra "ready" could make a joining client load twice.
+            using (CrossBranchLobby.NoMirror()) svc.SendMessage("ready");
             Utils.Log.Info("Player joined mid-game; re-sent lobby 'ready' so they can connect");
         }
         catch (Exception e) { MelonLogger.Error($"Late join 'ready' re-send failed: {e}"); }

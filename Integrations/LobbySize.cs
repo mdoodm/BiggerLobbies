@@ -113,15 +113,18 @@ public static class LobbySize
         if (HostLobby.TryGet(out var id))
         {
             bool ok = false; int readBack = -1;
+            // With a cross-branch lobby open, the two lobbies share the size (see CrossBranchLobby).
+            int limit = CrossBranchLobby.MainLimitFor(n);
             try
             {
-                ok = SteamMatchmaking.SetLobbyMemberLimit(id, n);
+                ok = SteamMatchmaking.SetLobbyMemberLimit(id, limit);
                 SteamMatchmaking.SetLobbyData(id, "max_players", n.ToString());
                 SteamMatchmaking.SetLobbyData(id, "num_slots", n.ToString());
                 readBack = SteamMatchmaking.GetLobbyMemberLimit(id);
+                CrossBranchLobby.ApplyLimits();
             }
             catch (Exception e) { MelonLogger.Warning($"SetLobbyMemberLimit failed: {e.Message}"); }
-            steamPart = ok && readBack == n
+            steamPart = ok && readBack == limit
                 ? $"Steam lobby limit is now {readBack}"
                 : $"Steam {(ok ? "accepted" : "refused")} the change and reports {readBack}";
         }

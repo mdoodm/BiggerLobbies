@@ -32,9 +32,10 @@ public static class HostLobby
         }
     }
 
+    /// <summary>Members of the lobby you host, plus anyone who came in through the cross-branch lobby.</summary>
     public static int MemberCount()
     {
-        try { return TryGet(out var id) ? SteamMatchmaking.GetNumLobbyMembers(id) : 0; }
+        try { return TryGet(out var id) ? SteamMatchmaking.GetNumLobbyMembers(id) + CrossBranchLobby.ExtraMembers() : 0; }
         catch { return 0; }
     }
 }

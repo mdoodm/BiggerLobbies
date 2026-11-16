@@ -23,6 +23,9 @@ public static class CrossBranchTest
     private static Key _key = Key.None;
     private static bool _advertisingOther;
 
+    /// <summary>True while the key has switched the lobby to the other branch's version.</summary>
+    public static bool Active => _advertisingOther;
+
     public static void Init(MelonPreferences_Category cat)
     {
         _keyEntry = cat.CreateEntry("DebugCrossBranchKey", "", "Debug: cross-branch join key",
@@ -81,7 +84,7 @@ public static class CrossBranchTest
     [HarmonyPostfix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyCreated))]
     private static void OnLobbyCreated_Postfix()
     {
-        if (!_advertisingOther) return;
+        if (CrossBranchLobby.Handling || !_advertisingOther) return;
         _advertisingOther = false;
         MelonLogger.Warning("Cross-branch test: new lobby, back to your own version");
     }

@@ -36,6 +36,7 @@ public static class LobbyDedupePatches
     [HarmonyPrefix, HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.CreateLobby))]
     private static bool Steam_CreateLobby_Prefix(ELobbyType eLobbyType, int cMaxMembers, ref SteamAPICall_t __result)
     {
+        if (CrossBranchLobby.Creating) return true;   // the second lobby, made on purpose next to the main one
         if (CreatePending || ServiceInLobby())
         {
             Log(() => $"Steam.CreateLobby BLOCKED duplicate (pending={CreatePending} inLobby={ServiceInLobby()})");
@@ -50,6 +51,7 @@ public static class LobbyDedupePatches
     [HarmonyPostfix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyCreated))]
     private static void Svc_OnLobbyCreated_Postfix(LobbyCreated_t result)
     {
+        if (CrossBranchLobby.Handling) return;
         _pendingSince = -1f;
         // A failed create must not leave the deferred invite armed for the next lobby we enter.
         if (result.m_eResult != EResult.k_EResultOK) _openInviteWhenReady = false;
@@ -78,6 +80,7 @@ public static class LobbyDedupePatches
     [HarmonyPostfix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyEntered))]
     private static void Svc_OnLobbyEntered_Postfix(SteamLobbyService __instance)
     {
+        if (CrossBranchLobby.Handling) return;
         _pendingSince = -1f;
         if (!_openInviteWhenReady) return;
         _openInviteWhenReady = false;

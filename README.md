@@ -35,6 +35,7 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 - **Take items.** Someone grabbed the product and left? Move their items and cash into your inventory, and they don't get them back if they rejoin. Every take is logged, with a copy of what they had. Changed your mind? **Give back** returns what you still carry to their empty slots.
 - **Access.** Build a whitelist from your Steam friends, save it as a crew, and load it next session in one click. Bans are saved between games and end on their own.
 - **Lobby.** Private, Friends only or Open, and the lobby size, even while friends are in.
+- **Other branch (experimental).** Let friends on the other Steam branch join too, with no mod on their side. See [Good to know](#good-to-know).
 - **Saving.** How often the world and each player save, plus a Save now button.
 - **Discord.** Your profile shows "Hosting a lobby, Friends only (3 of 20)" under Playing Schedule I. Player count, lobby type and save name can each be turned off; the save name is off by default.
 
@@ -120,11 +121,12 @@ Everything is on by default, and most of it is easier to change in **Host settin
 
 There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) for checking a big lobby without a big group. Leave them at `0`.
 
-**Testing cross-branch play**
+**Other branch (experimental)**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `DebugCrossBranchKey` | empty | A key name, such as `F8`. While you host, it switches your lobby between your branch and the other one, so a friend on the other branch can join. Experimental, see [Good to know](#good-to-know). Leave empty to turn it off |
+| `CrossBranchLobby` | `false` | While you host, also open a hidden lobby for friends on the other Steam branch, so both branches can join. Easiest to turn on in Host settings, on the Lobby tab. See [Good to know](#good-to-know) |
+| `DebugCrossBranchKey` | empty | Testing only. A key name, such as `F8`. While you host, it switches your lobby between your branch and the other one by hand. Leave empty to turn it off |
 
 </details>
 
@@ -133,8 +135,13 @@ There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) fo
 - Friends don't need the mod. If they run MelonLoader for other mods, it must be v0.7.3 or later.
 - Every player needs the same content mods as the host. A mod that adds new items or objects on the host but not on a friend's game breaks their world.
 - With r2modman, launch with Start modded, not from Steam.
-- Everyone in a lobby must be on the same Steam branch. A player on the other branch gets "Version Mismatch" (`0.4.7f12` and `0.4.7f12 Alternate`) from the game itself.
-- Cross-branch play is being tested. Set `DebugCrossBranchKey` to a key such as `F8`. While you host, press it and a friend on the other branch can join. Press it again once they're in, so friends on your branch can join again. It's experimental: the two builds may not stay in sync, so back up your save first. Results are welcome in an [issue](https://github.com/mdoodm/BiggerLobbies/issues/new/choose), with both players' logs.
+- Normally everyone in a lobby must be on the same Steam branch. A player on the other branch gets "Version Mismatch" (`0.4.7f12` and `0.4.7f12 Alternate`) from the game itself.
+- **Playing across branches (experimental).** Turn on **Other branch** in Host settings, on the Lobby tab. While you host, a second, hidden lobby opens for the other branch, and both lead into your game. Friends on the other branch don't need the mod:
+  - **Invite (other branch)** on the same tab invites them straight in.
+  - With Steam's **Join Game** they see "Version Mismatch" once. Your lobby then accepts their branch for 15 seconds, so their second try works. Friends on your branch who try during those seconds get the same message once, and their retry works.
+  - Both lobbies share your lobby size.
+
+  The two builds may not stay fully in sync, so back up your save first. Results are welcome in an [issue](https://github.com/mdoodm/BiggerLobbies/issues/new/choose), with both players' logs.
 - With both DLLs in `Mods`, the log shows the one for the other branch being skipped. On the default branch that's a short `'BiggerLobbies (Mono)' is incompatible` notice. On the `alternate` branch it's a red `Failed to load Melon 'BiggerLobbies_Il2cpp'` error with a stack trace. Both are expected and harmless. Delete the other DLL if you'd rather not see them.
 - The Mono build shows as `BiggerLobbies (Mono)` in the log.
 - MelonLoader won't load it alongside ModManager & PhoneApp.

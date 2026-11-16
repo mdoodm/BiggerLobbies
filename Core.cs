@@ -71,6 +71,7 @@ namespace BiggerLobbies
             LateJoinFix.Init(cat);
             AlwaysHostLobby.Init(cat);
             CrossBranchTest.Init(cat);
+            CrossBranchLobby.Init(cat);
             BuildUpdates();
         }
 
@@ -86,6 +87,7 @@ namespace BiggerLobbies
             {
                 ("AutoSave", AutoSave.Update),
                 ("CrossBranchTest", CrossBranchTest.Update),
+                ("CrossBranchLobby", CrossBranchLobby.Update),
                 ("DebugDummies", DebugDummies.Update),
                 ("DepartedPlayers", DepartedPlayers.Update),
                 ("DepartedPlayers.LeftWith", DepartedPlayers.UpdateLeftWith),
