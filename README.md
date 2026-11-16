@@ -7,6 +7,7 @@ Friends join any time, rejoin after a crash, and nobody loses progress. Only the
 <a href="https://github.com/mdoodm/BiggerLobbies/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mdoodm/BiggerLobbies?label=release&color=d95fc8&labelColor=1a1e28"></a>
 <img alt="Schedule I 0.4.7" src="https://img.shields.io/badge/Schedule%20I-0.4.7-e9e6df?labelColor=1a1e28">
 <img alt="Only the host installs it" src="https://img.shields.io/badge/installed%20by-host%20only-e9e6df?labelColor=1a1e28">
+<img alt="Il2Cpp and Mono builds" src="https://img.shields.io/badge/builds-Il2Cpp%20%2B%20Mono-e9e6df?labelColor=1a1e28">
 
 **[Download the latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest)** or read [how to install](#install)
 
@@ -39,18 +40,25 @@ Schedule I's co-op stops at 4 players, and one crash can end the night. BiggerLo
 
 ## Install
 
-You need **Schedule I 0.4.7** (the default Steam branch).
+You need **Schedule I 0.4.7**, on either Steam branch.
 
 1. Install <a href="https://github.com/LavaGang/MelonLoader/releases/latest"><b>MelonLoader v0.7.3</b></a> or later into the game folder.
-2. Download `BiggerLobbies_Il2cpp.dll` from the [latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest) and put it in `Schedule I\Mods\`.
+2. Download the DLL for your branch from the [latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest) and put it in `Schedule I\Mods\`:
+
+   | Steam branch | DLL |
+   |---|---|
+   | Default (most players) | `BiggerLobbies_Il2cpp.dll` |
+   | `alternate` (Mono) | `BiggerLobbies_Mono.dll` |
+
+   Not sure which you're on? Put both in `Mods`. MelonLoader loads the right one and skips the other (see [Good to know](#good-to-know)). r2modman installs both for you.
 3. Launch the game, load a save, and invite your friends.
 
-Updating? Replace the DLL. Your settings, bans and crews carry over.
+Updating? Replace the DLL. Your settings, bans and crews carry over, and they're shared by both builds.
 
-Each release lists the DLL's SHA-256. To check your download in PowerShell:
+Each release lists the SHA-256 of both DLLs. To check your download in PowerShell:
 
 ```
-Get-FileHash .\BiggerLobbies_Il2cpp.dll -Algorithm SHA256
+Get-FileHash .\BiggerLobbies_*.dll -Algorithm SHA256
 ```
 
 > [!TIP]
@@ -119,7 +127,9 @@ There are also two [testing tools](docs/hosting-big-lobbies.md#testing-tools) fo
 - Friends don't need the mod. If they run MelonLoader for other mods, it must be v0.7.3 or later.
 - Every player needs the same content mods as the host. A mod that adds new items or objects on the host but not on a friend's game breaks their world.
 - With r2modman, launch with Start modded, not from Steam.
-- It's built for the Il2Cpp game, the default Steam branch. The Mono (alternate) branch isn't supported on 0.4.7.
+- Everyone in a lobby must be on the same Steam branch. A player on the other branch gets "Version Mismatch" (`0.4.7f12` and `0.4.7f12 Alternate`) from the game itself.
+- With both DLLs in `Mods`, the log shows the one for the other branch being skipped. On the default branch that's a short `'BiggerLobbies (Mono)' is incompatible` notice. On the `alternate` branch it's a red `Failed to load Melon 'BiggerLobbies_Il2cpp'` error with a stack trace. Both are expected and harmless. Delete the other DLL if you'd rather not see them.
+- The Mono build shows as `BiggerLobbies (Mono)` in the log.
 - MelonLoader won't load it alongside ModManager & PhoneApp.
 
 ## Read more

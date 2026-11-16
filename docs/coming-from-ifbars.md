@@ -6,7 +6,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 
 ## Switching over
 
-1. Disable or uninstall the ifBars package (in r2modman, or delete its DLL from `Mods`).
+1. Disable or uninstall the ifBars package (in r2modman, or delete its DLLs from `Mods`). Its DLLs have the same names as this fork's, so also delete any `BiggerLobbies_*.dll.di` left in `Mods`. The ifBars package installs SwapperPlugin, which renames DLLs for the other branch to `.di`. This fork doesn't need it, so remove it too unless another mod depends on it.
 2. Follow the [install steps](../README.md#install).
 3. Friends who installed the ifBars version can remove it. Only the host needs this fork.
 
@@ -25,7 +25,7 @@ This fork picks up [ifBars/BiggerLobbies](https://github.com/ifBars/BiggerLobbie
 | Host controls | None | Host settings: lobby type, live lobby size, kick, timed bans, whitelist and saved crews, take items back from players who left |
 | Strangers in an Open lobby | Kicked as they load in | Can play |
 | Settings | None | 15, plus 2 testing tools, most of them also in Host settings |
-| Builds | Mono and Il2Cpp | Il2Cpp only |
+| Builds | Mono and Il2Cpp | Mono and Il2Cpp, both for 0.4.7, from one codebase |
 
 ## Issues fixed
 

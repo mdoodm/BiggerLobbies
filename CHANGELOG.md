@@ -1,6 +1,18 @@
 # Changelog
 
-All versions are for **Schedule I 0.4.7** (Il2Cpp build) and need MelonLoader v0.7.3 or later. Only the host needs the mod.
+All versions are for **Schedule I 0.4.7** and need MelonLoader v0.7.3 or later. Only the host needs the mod. Up to 2.0.3 they were for the default (Il2Cpp) branch only; from 2.1.0 there's a build for each branch.
+
+## 2.1.0
+
+### Added
+- **Mono build** for the `alternate` Steam branch: `BiggerLobbies_Mono.dll`, with every feature of the Il2Cpp build. It shows as `BiggerLobbies (Mono)` in the log, and uses the same settings, bans, crews and `UserData/BiggerLobbies` files. Tested solo on 0.4.7f12 Alternate (lobby, Host settings, hosting, autosave, Take items and Give back), not yet with other players.
+- Both DLLs can sit in `Mods` together: MelonLoader loads the one for your branch and skips the other. On the `alternate` branch the skipped Il2Cpp DLL shows a harmless load error.
+- If a DLL ever runs on the wrong branch, it says so in the log and does nothing else.
+
+### Changed
+- Everyone in a lobby must still be on the same branch: the game refuses a player from the other one with "Version Mismatch". The docs now say so.
+- Build: one codebase for both builds, with every backend difference in `Utils/Shim.cs` and `Utils/GlobalUsings.cs`. The `Mono` configuration is back. Harmony patches are applied after the backend check rather than automatically. `Il2CppLobbyPatches.cs` is now `LobbyPatches.cs`.
+- Bug reports ask which game branch you're on.
 
 ## 2.0.3
 

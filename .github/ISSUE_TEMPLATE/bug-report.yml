@@ -19,8 +19,19 @@ body:
     id: version
     attributes:
       label: BiggerLobbies version
-      description: Shown near the top of `MelonLoader\Latest.log`, for example `BiggerLobbies v1.0.7`.
-      placeholder: 1.0.7
+      description: Shown near the top of `MelonLoader\Latest.log`, for example `BiggerLobbies v2.1.0` or `BiggerLobbies (Mono) v2.1.0`.
+      placeholder: 2.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: branch
+    attributes:
+      label: Game branch
+      description: In Steam, open the game's Properties, then Betas. The log also shows it near the top as `Game Version`.
+      options:
+        - Default (Game Version 0.4.7f12, BiggerLobbies_Il2cpp.dll)
+        - alternate / Mono (Game Version 0.4.7f12 Alternate, BiggerLobbies_Mono.dll)
+        - Not sure
     validations:
       required: true
   - type: input

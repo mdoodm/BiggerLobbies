@@ -19,9 +19,21 @@ BiggerLobbies only writes warnings and errors by default. Most log lines quoted 
 
 You're running the original ifBars DLL, which doesn't work on game 0.4.7. Replace it with the one from the [latest release](https://github.com/mdoodm/BiggerLobbies/releases/latest). See [coming from ifBars](coming-from-ifbars.md).
 
+### `Failed to load Melon 'BiggerLobbies_Il2cpp'` on the `alternate` branch
+
+That's expected if both DLLs are in `Mods`. `BiggerLobbies_Il2cpp.dll` is for the default branch, and the Mono game can't read it, so MelonLoader prints an error with a stack trace and moves on. Check for `BiggerLobbies (Mono) v…` and `1 Mod loaded` just below it: that's the build that runs. Delete `BiggerLobbies_Il2cpp.dll` if you'd rather not see the error.
+
+### `'BiggerLobbies (Mono)' is incompatible … Domain: MONO` on the default branch
+
+Also expected with both DLLs in `Mods`: MelonLoader skips the Mono build and loads `BiggerLobbies_Il2cpp.dll`. Delete `BiggerLobbies_Mono.dll` if you'd rather not see the notice.
+
+### `This is the … build of BiggerLobbies, but the game is the … branch`
+
+The DLL doesn't match your Steam branch, and nothing else is loaded. Usually MelonLoader skips the wrong build before this point, so seeing it means it got further. Use the DLL the message names. To see your branch, open the game's **Properties** in Steam, then **Betas**: "None" is the default branch (`BiggerLobbies_Il2cpp.dll`), and `alternate` is Mono (`BiggerLobbies_Mono.dll`). After switching branch, keep both DLLs or swap to the other one.
+
 ### `Error Generating Interop Assemblies! (Pass11ComputeTypeSpecifics)`
 
-That MelonLoader install is too old for game 0.4.7. Update to v0.7.3, then delete these two folders so it rebuilds them on the next launch:
+Default branch only. That MelonLoader install is too old for game 0.4.7. Update to v0.7.3, then delete these two folders so it rebuilds them on the next launch:
 
 - `MelonLoader\Il2CppAssemblies`
 - `MelonLoader\Dependencies\Il2CppAssemblyGenerator`
@@ -30,7 +42,7 @@ If you use r2modman, check you launched with **Start modded** and not from Steam
 
 ### I updated, but nothing changed
 
-Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.0.3`. If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
+Check the top of `Latest.log` for the version, for example `BiggerLobbies v2.1.0` (or `BiggerLobbies (Mono) v2.1.0` on the `alternate` branch). If it's older, a mod manager may have put its own copy back: update the mod inside r2modman, or close r2modman before copying the DLL in by hand.
 
 ## Host settings
 
@@ -47,6 +59,10 @@ A player's own game saves their inventory as they leave, so Take items waits abo
 Give back never makes items. It only returns what you still carry, matching the item exactly (same quality and packaging), and only into the player's slots that are still empty. If you're short of an item, its slot gets what you have and isn't topped up later, because it's no longer empty. Items you had none of, and cash, can be given back with another press once you have them. Each give back is listed under **Taken items** too.
 
 ## Friends can't join
+
+### A friend gets "Version Mismatch"
+
+The host and that player are on different Steam branches: the popup shows `0.4.7f12` for the default branch and `0.4.7f12 Alternate` for Mono. The game itself refuses the join, with or without BiggerLobbies. Everyone in the lobby needs the same branch, set under the game's **Properties**, then **Betas** in Steam.
 
 ### A friend can't join after I've loaded in
 

@@ -2,13 +2,13 @@
 
 [Back to the README](../README.md)
 
-For modders, curious players, and anyone reviewing the code. BiggerLobbies is a MelonLoader mod for the Il2Cpp build of Schedule I 0.4.7. It patches the game's own classes with Harmony and runs entirely on the host. The one exception is kick messages, which a player's game shows only if they have the mod too.
+For modders, curious players, and anyone reviewing the code. BiggerLobbies is a MelonLoader mod for Schedule I 0.4.7, built from one codebase for both Steam branches: `BiggerLobbies_Il2cpp.dll` for the default (Il2Cpp) game and `BiggerLobbies_Mono.dll` for the `alternate` (Mono) game. It patches the game's own classes with Harmony and runs entirely on the host. The one exception is kick messages, which a player's game shows only if they have the mod too.
 
 ## The fixes
 
 | Area | What the game does | What the mod does |
 |---|---|---|
-| Lobby size | The Steam lobby is created for 4 players, and `Lobby.PlayerLimit` is a compile-time constant in the Il2Cpp build, so writing to it crashes the game | Raises the size passed to `SteamLobbyService.CreateLobby`, then sets the Steam member limit and the `max_players` lobby data once the lobby exists |
+| Lobby size | The Steam lobby is created for 4 players, and `Lobby.PlayerLimit` is a compile-time constant, so it can't be raised directly (on Il2Cpp, writing to it crashes the game) | Raises the size passed to `SteamLobbyService.CreateLobby`, then sets the Steam member limit and the `max_players` lobby data once the lobby exists |
 | Network connections | The Steam transport (FishySteamworks, behind FishNet's Multipass) accepts 4 connections besides the host, and copies its limit into the server socket when the server starts | Raises the transport's limit to `MaxPlayers` before the server starts, and on the live socket if it's already running |
 | Member list | `SteamLobbyService` writes each member into a fixed array without a bounds check | Resizes the array to Steam's 250-member cap, so a lobby bigger than any player's own setting can't overflow it |
 | Lobby screen | One row of slots grown from a zero-size anchor, 75 px per player | Clones the game's own slot up to `MaxPlayers`. Above 20 it switches the grid to rows of 20, moves the Invite button beside the first row, and stops word-wrap in the title |
@@ -31,11 +31,23 @@ For modders, curious players, and anyone reviewing the code. BiggerLobbies is a 
 
 The mod writes only warnings and errors to the log unless `DiagnosticLog` is on. With it on, every step of the lobby and join flow is logged with a `[diag]` prefix.
 
+## Two builds, one codebase
+
+Both branches are the same game version, built from the same source; the Il2Cpp game just reaches its code through MelonLoader's generated interop assemblies, with `Il2Cpp` in front of every namespace. The mod keeps every backend difference in two files:
+
+- `Utils/GlobalUsings.cs` imports the game's namespaces once, with or without the `Il2Cpp` prefix, so no other file names a backend.
+- `Utils/Shim.cs` holds the rest: array and dictionary types (`Il2CppStructArray<byte>` against `byte[]`, for example), checked casts (`TryCast<T>` against `as`), runtime type names, `WasCollected`, and file moves.
+
+On Mono, private game members (such as the Steam transport's verified Steam IDs) are reached through a publicized copy of the game's assemblies, as the Il2Cpp interop already exposes them.
+
+**Loading next to each other.** Each DLL declares its backend with `MelonPlatformDomain`, so MelonLoader skips the other build. The two builds also need different names (`BiggerLobbies` and `BiggerLobbies (Mono)`): MelonLoader orders mods by name and silently drops a second one with the same name before checking its backend, so the wrong one could win. Harmony patches are applied by the mod after a backend check (`HarmonyDontPatchAll`), not automatically on load. On the `alternate` branch the Il2Cpp DLL can't even be read, because it targets .NET 6 and the Mono runtime can't resolve its assembly attributes, so MelonLoader logs a load error for it instead.
+
 ## Source layout
 
 | File | What's in it |
 |---|---|
-| `Integrations/Il2CppLobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
+| `Core.cs` | Entry point: the backend check, applying patches, and starting each feature |
+| `Integrations/LobbyPatches.cs` | Lobby size, Steam lobby data, invites and the lobby screen |
 | `Integrations/LobbySize.cs` | The `MaxPlayers` setting, live size changes, the network connection limit, the lobby screen table and `DebugFakePlayers` |
 | `Integrations/LobbyDedupePatches.cs` | One lobby per host |
 | `Integrations/LobbyPrivacy.cs` | Lobby type, and letting strangers stay in Open lobbies |
@@ -60,11 +72,15 @@ The mod writes only warnings and errors to the log unless `DiagnosticLog` is on.
 | `Utils/SteamIdentity.cs` | The Steam ID Steam's networking verified for each connection, and the Steam transport |
 | `Utils/Log.cs` | Quiet logging and the `DiagnosticLog` setting |
 | `Utils/MiniJson.cs` | A small JSON reader and writer for the Give back records |
-| `Utils/Constants.cs` | Default player limit and mod info |
+| `Utils/Constants.cs` | Default player limit and mod info, including each build's name |
+| `Utils/GlobalUsings.cs` | The game's namespaces for each backend |
+| `Utils/Shim.cs` | Everything else that differs between the Il2Cpp and Mono builds |
 
 ## Build from source
 
 You need the .NET SDK (6.0 or later).
+
+**Il2Cpp build** (`BiggerLobbies_Il2cpp.dll`), from a game on the default branch:
 
 1. Run the game once with MelonLoader so it generates `MelonLoader\Il2CppAssemblies`.
 2. Build the `Il2cpp` configuration, pointing `GamePath` at your game folder or r2modman profile:
@@ -72,6 +88,14 @@ You need the .NET SDK (6.0 or later).
    ```
    dotnet build BiggerLobbies.csproj -c Il2cpp -p:GamePath="C:\path\to\Schedule I"
    ```
+
+**Mono build** (`BiggerLobbies_Mono.dll`), from a game on the `alternate` branch with MelonLoader installed:
+
+```
+dotnet build BiggerLobbies.csproj -c Mono -p:GamePath="C:\path\to\Schedule I"
+```
+
+It references the game's `Schedule I_Data\Managed` folder, which only exists while the game is on the `alternate` branch, since switching branch replaces it. To build both from one install, copy `Managed` somewhere else while on `alternate`, then add `-p:ManagedPath="C:\path\to\copy\Managed"` to the Mono build. The first Mono build downloads Krafs.Publicizer from NuGet.
 
 > [!WARNING]
 > On Windows the post-build step copies the DLL into `$(GamePath)\Mods`; add `-p:SkipDeploy=true` to skip that. Add `-p:Deploy=true` to also force-close `Schedule I.exe` before the copy and start the game again afterwards.

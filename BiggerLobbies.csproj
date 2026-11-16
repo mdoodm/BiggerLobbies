@@ -444,7 +444,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <Compile Include="Core.cs" />
-	  <Compile Include="Integrations\Il2CppLobbyPatches.cs" />
+	  <Compile Include="Integrations\LobbyPatches.cs" />
 	  <Compile Include="Integrations\LobbyDedupePatches.cs" />
 	  <Compile Include="Integrations\DiagnosticPatches.cs" />
 	  <Compile Include="Integrations\AutoSave.cs" />
