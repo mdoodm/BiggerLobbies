@@ -1,10 +1,6 @@
 using System;
 using System.Collections;
 using HarmonyLib;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Networking;
-using Il2CppScheduleOne.Persistence;
-using Il2CppSteamworks;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;

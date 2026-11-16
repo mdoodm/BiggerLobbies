@@ -1,10 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Il2CppFishNet;
-using Il2CppFishNet.Connection;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using Il2CppScheduleOne.PlayerScripts;
-using Il2CppSteamworks;
 using MelonLoader;
 using BiggerLobbies.Utils;
 
@@ -149,7 +144,7 @@ public static class HostPlayers
         catch (Exception e) { MelonLogger.Warning($"Couldn't disconnect banned player: {e.Message}"); }
     }
 
-    private static Il2CppSystem.Collections.Generic.Dictionary<int, NetworkConnection>? Clients()
+    private static ClientMap? Clients()
     {
         try { return InstanceFinder.ServerManager?.Clients; } catch { return null; }
     }
@@ -209,21 +204,21 @@ public static class HostPlayers
         return null;
     }
 
-    private static Il2CppFishySteamworks.Server.ServerSocket? SteamServer() => SteamIdentity.Server();
+    private static ServerSocket? SteamServer() => SteamIdentity.Server();
 
     private static bool _pingWarned;
 
     // FishySteamworks keeps Steam ID -> connection id -> Steam connection handle.
     // Steam's real-time status for that handle has the round-trip time in ms.
-    private static int PingOf(Il2CppFishySteamworks.Server.ServerSocket? server, ulong sid)
+    private static int PingOf(ServerSocket? server, ulong sid)
     {
         if (server == null || sid == 0) return -1;
         try
         {
             if (!server._steamIds.First.TryGetValue(new CSteamID(sid), out int connId)) return -1;
             if (!server._steamConnections.Second.TryGetValue(connId, out HSteamNetConnection h)) return -1;
-            var status = new SteamNetConnectionRealTimeStatus_t { reserved = new Il2CppStructArray<uint>(16) };
-            var lanes = new SteamNetConnectionRealTimeLaneStatus_t { reserved = new Il2CppStructArray<uint>(10) };
+            var status = new SteamNetConnectionRealTimeStatus_t { reserved = Shim.UInts(16) };
+            var lanes = new SteamNetConnectionRealTimeLaneStatus_t { reserved = Shim.UInts(10) };
             var r = SteamNetworkingSockets.GetConnectionRealTimeStatus(h, ref status, 0, ref lanes);
             return r == EResult.k_EResultOK ? status.m_nPing : -1;
         }

@@ -1,10 +1,4 @@
 using System;
-using Il2CppFishNet;
-using Il2CppFishNet.Connection;
-using Il2CppFishNet.Transporting.Multipass;
-using Il2CppSteamworks;
-using ServerSocket = Il2CppFishySteamworks.Server.ServerSocket;
-using SteamTransport = Il2CppFishySteamworks.FishySteamworks;
 
 namespace BiggerLobbies.Utils;
 
@@ -17,13 +11,13 @@ public static class SteamIdentity
 {
     private static Multipass? Mp()
     {
-        try { return InstanceFinder.TransportManager?.Transport?.TryCast<Multipass>(); }
+        try { return InstanceFinder.TransportManager?.Transport.As<Multipass>(); }
         catch { return null; }
     }
 
-    private static SteamTransport? AsSteam(Il2CppFishNet.Transporting.Transport? t)
+    private static SteamTransport? AsSteam(Transport? t)
     {
-        try { return t?.TryCast<SteamTransport>(); }
+        try { return t.As<SteamTransport>(); }
         catch { return null; }
     }
 

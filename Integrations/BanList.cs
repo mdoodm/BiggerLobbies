@@ -4,8 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Il2CppFishNet;
-using Il2CppFishNet.Connection;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
@@ -180,7 +178,7 @@ public static class BanList
     {
         if (steamId == 0) return false;
         if (Utils.SteamIdentity.TryGetClientId(steamId, out _)) return true;   // transport-verified, even without a login record
-        Il2CppSystem.Collections.Generic.Dictionary<int, NetworkConnection>? clients = null;
+        ClientMap? clients = null;
         try { clients = InstanceFinder.ServerManager?.Clients; } catch { }
         foreach (var kv in _verified)
         {
@@ -194,7 +192,7 @@ public static class BanList
 
     public static ulong HostSteamId()
     {
-        try { return Il2CppSteamworks.SteamUser.GetSteamID().m_SteamID; } catch { return 0; }
+        try { return SteamUser.GetSteamID().m_SteamID; } catch { return 0; }
     }
 
     private static readonly Dictionary<ulong, float> _lastRefusedLog = new();

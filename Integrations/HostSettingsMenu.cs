@@ -2,11 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Il2CppFishNet;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.UI;
-using Il2CppScheduleOne.UI.MainMenu;
-using Il2CppTMPro;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.Events;
@@ -267,7 +262,7 @@ public static class HostSettingsMenu
 
         var ms = go.AddComponent<MenuScreen>();
         ms.Group = go.GetComponent<CanvasGroup>();
-        ms.State = go.GetComponent<Il2CppScheduleOne.State.MonoState>();
+        ms.State = go.GetComponent<S1.State.MonoState>();
         ms.PreviousScreen = previous;
         ms.ExitInputPriority = prio;
 
@@ -294,10 +289,9 @@ public static class HostSettingsMenu
         {
             var c = all[i];
             if (c == null) continue;
-            var type = c.GetIl2CppType();
-            string ns = type.Namespace ?? "";
+            var (ns, name) = Shim.TypeOf(c);
             if (!ns.StartsWith("ScheduleOne") && !ns.StartsWith("Il2CppScheduleOne")) continue;
-            if (KeepScripts.Contains(type.Name)) continue;
+            if (KeepScripts.Contains(name)) continue;
             UnityEngine.Object.DestroyImmediate(c);
         }
         // Gamepad selection frames: the scripts that toggled them are gone, so hide them.

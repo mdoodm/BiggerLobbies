@@ -5,10 +5,6 @@ using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using System.Threading;
-using Il2CppFishNet;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Persistence;
-using Il2CppSteamworks;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;

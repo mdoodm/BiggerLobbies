@@ -1,11 +1,5 @@
 using System;
 using HarmonyLib;
-using Il2CppFishNet.Connection;
-using Il2CppFishNet.Managing.Server;
-using Il2CppFishNet.Transporting;
-using Il2CppScheduleOne.Networking;
-using Il2CppScheduleOne.Platform;
-using Il2CppSteamworks;
 using MelonLoader;
 using BiggerLobbies.Utils;
 
@@ -26,7 +20,7 @@ public static class StaleAuthFix
     {
         try
         {
-            if (conn == null || auth == null) return true;
+            if (conn == null || Shim.IsNull(auth)) return true; // a class on Il2Cpp, a struct on Mono
             ulong claimed = auth.SteamId;
 
             // The SteamId in the broadcast is only the client's claim until Steam has checked

@@ -6,7 +6,7 @@
 		<RootNamespace>BiggerLobbies</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
-		<Configurations>Il2cpp</Configurations>
+		<Configurations>Il2cpp;Mono</Configurations>
 	</PropertyGroup>
 
 	<!-- Default game path only applies when -p:GamePath=... is not supplied -->
@@ -20,6 +20,17 @@
 		<ModsPath>$(GamePath)\Mods</ModsPath>
 		<DefineConstants>IL2CPP</DefineConstants>
 		<AssemblyName>BiggerLobbies_Il2cpp</AssemblyName>
+	</PropertyGroup>
+
+	<!-- Mono (alternate branch). GamePath must point at an install switched to the alternate branch.
+	     The "_Mono" / "_Il2cpp" suffixes matter: keep them so each DLL names its backend. -->
+	<PropertyGroup Condition="'$(Configuration)'=='Mono'">
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<ManagedPath>$(GamePath)\Schedule I_Data\Managed</ManagedPath>
+		<MelonLoaderPath>$(GamePath)\MelonLoader\net35</MelonLoaderPath>
+		<ModsPath>$(GamePath)\Mods</ModsPath>
+		<DefineConstants>MONO</DefineConstants>
+		<AssemblyName>BiggerLobbies_Mono</AssemblyName>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -418,6 +429,19 @@
 			<HintPath>$(MelonLoaderPath)\Il2CppInterop.Runtime.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+
+	<!-- Mono references: every game/Unity DLL in Managed, minus the runtime's own libraries
+	     (netstandard2.1 supplies those). Nothing is copied to the output. -->
+	<ItemGroup Condition="'$(Configuration)'=='Mono'">
+		<Reference Include="$(ManagedPath)\*.dll"
+		           Exclude="$(ManagedPath)\mscorlib.dll;$(ManagedPath)\netstandard.dll;$(ManagedPath)\System*.dll;$(ManagedPath)\Mono.*.dll;$(ManagedPath)\Microsoft.*.dll;$(ManagedPath)\Accessibility.dll;$(ManagedPath)\Novell.*.dll;$(ManagedPath)\Edgegap.dll"
+		           Private="false" />
+		<Reference Include="$(MelonLoaderPath)\MelonLoader.dll" Private="false" />
+		<Reference Include="$(MelonLoaderPath)\0Harmony.dll" Private="false" />
+		<!-- The Il2Cpp interop exposes private game members; on Mono the publicizer does the same. -->
+		<PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" />
+		<Publicize Include="Assembly-CSharp;FishNet.Runtime;com.rlabrecque.steamworks.net" />
+	</ItemGroup>
 	<ItemGroup>
 	  <Compile Include="Core.cs" />
 	  <Compile Include="Integrations\Il2CppLobbyPatches.cs" />
@@ -444,6 +468,8 @@
 	  <Compile Include="Utils\Constants.cs" />
 	  <Compile Include="Utils\Log.cs" />
 	  <Compile Include="Utils\SteamIdentity.cs" />
+	  <Compile Include="Utils\GlobalUsings.cs" />
+	  <Compile Include="Utils\Shim.cs" />
 	  <Compile Include="Integrations\KickNotice.cs" />
 	  <Compile Include="Integrations\ModHandshake.cs" />
 	  <Compile Include="Integrations\DiscordPresence.cs" />

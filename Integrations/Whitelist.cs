@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Il2CppFishNet.Connection;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;

@@ -1,6 +1,5 @@
 using System;
 using HarmonyLib;
-using Il2CppScheduleOne.Networking;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
@@ -9,7 +8,7 @@ namespace BiggerLobbies.Integrations;
 [HarmonyPatch]
 public static class DiagnosticPatches
 {
-    private static string Id(Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase? o) => o == null ? "null" : o.Pointer.ToString("X");
+    private static string Id(object? o) => Shim.Id(o);
     // Takes a lambda so the message is only built when the diagnostic log is on.
     private static void Log(Func<string> s) { if (Utils.Log.Verbose) Utils.Log.Info($"[diag] {s()}"); }
 
@@ -45,11 +44,11 @@ public static class DiagnosticPatches
         Log(() => $"Svc.CreateLobby service={Id(__instance)} maxPlayers={maxPlayers} inLobby={__instance.IsInLobby}");
 
     [HarmonyPrefix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyCreated))]
-    private static void Svc_OnLobbyCreated(SteamLobbyService __instance, Il2CppSteamworks.LobbyCreated_t result) =>
+    private static void Svc_OnLobbyCreated(SteamLobbyService __instance, LobbyCreated_t result) =>
         Log(() => $"Svc.OnLobbyCreated service={Id(__instance)} lobby={result.m_ulSteamIDLobby} result={result.m_eResult}");
 
     [HarmonyPrefix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.OnLobbyEntered))]
-    private static void Svc_OnLobbyEntered(SteamLobbyService __instance, Il2CppSteamworks.LobbyEnter_t result) =>
+    private static void Svc_OnLobbyEntered(SteamLobbyService __instance, LobbyEnter_t result) =>
         Log(() => $"Svc.OnLobbyEntered service={Id(__instance)} lobby={result.m_ulSteamIDLobby} response={result.m_EChatRoomEnterResponse}");
 
     [HarmonyPrefix, HarmonyPatch(typeof(SteamLobbyService), nameof(SteamLobbyService.JoinLobby))]

@@ -1,10 +1,5 @@
 ﻿using System;
 using HarmonyLib;
-using Il2CppFishNet;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.GameTime;
-using Il2CppScheduleOne.Persistence;
-using Il2CppScheduleOne.PlayerScripts;
 using MelonLoader;
 using UnityEngine.SceneManagement;
 
@@ -137,7 +132,7 @@ public static class AutoSave
                 var fp = System.IO.Path.Combine(src, f);
                 all.Append(f).Append('\n').Append(System.IO.File.Exists(fp) ? System.IO.File.ReadAllText(fp) : "").Append('\n');
             }
-            string hash = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(all.ToString())));
+            string hash = BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(all.ToString()))).Replace("-", "");
             if (!force && _lastHash.TryGetValue(code, out var lastHash) && lastHash == hash) return;
             _lastHash[code] = hash;
             var dest = System.IO.Path.Combine(root, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
@@ -169,7 +164,7 @@ public static class AutoSave
         try
         {
             System.IO.File.WriteAllText(tmp, text);
-            System.IO.File.Move(tmp, path, overwrite: true);
+            Shim.MoveOverwrite(tmp, path);
         }
         catch
         {

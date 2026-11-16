@@ -7,11 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using BiggerLobbies.Utils;
-using Il2CppFishNet;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.ItemFramework;
-using Il2CppScheduleOne.Persistence;
-using Il2CppScheduleOne.PlayerScripts;
 using MelonLoader;
 using MelonLoader.Utils;
 

@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HarmonyLib;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using Il2CppScheduleOne.Networking;
-using Il2CppSteamworks;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
@@ -137,7 +134,7 @@ public static class ModHandshake
                 sb.Append(n);
             }
             var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-            var buf = new Il2CppStructArray<byte>(bytes.Length + 1);
+            var buf = Shim.Bytes(bytes.Length + 1);
             for (int i = 0; i < bytes.Length; i++) buf[i] = bytes[i];
             SteamMatchmaking.SendLobbyChatMsg(lobby, buf, buf.Length);
             Utils.Log.Info($"Sent hello to the host: version {Utils.Constants.MOD_VERSION}, {bytes.Length} bytes");
@@ -157,7 +154,7 @@ public static class ModHandshake
             ulong from = result.m_ulSteamIDUser;
             if (from == 0 || from == SteamUser.GetSteamID().m_SteamID || !IsMember(lobby, from)) return;
 
-            var buf = new Il2CppStructArray<byte>(4096);
+            var buf = Shim.Bytes(4096);
             int n = SteamMatchmaking.GetLobbyChatEntry(lobby, (int)result.m_iChatID, out _, buf, buf.Length, out _);
             if (n <= Prefix.Length) return;
             if (n > buf.Length) n = buf.Length;

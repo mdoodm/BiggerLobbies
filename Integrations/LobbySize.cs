@@ -1,16 +1,8 @@
 using System;
 using HarmonyLib;
-using Il2CppFishNet;
-using Il2CppFishNet.Transporting;
-using Il2CppFishNet.Transporting.Multipass;
-using SteamTransport = Il2CppFishySteamworks.FishySteamworks;
-using Il2CppScheduleOne.Networking;
-using Il2CppScheduleOne.Persistence;
-using Il2CppSteamworks;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.UI;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using static BiggerLobbies.Utils.Constants;
 
 namespace BiggerLobbies.Integrations;
@@ -207,7 +199,7 @@ public static class LobbySize
 
     /// <summary>Turns on placeholder slots after the real players; returns how many were added
     /// (including any beyond the slots that exist, so the title can count them).</summary>
-    public static int ShowFakePlayers(Il2CppReferenceArray<RectTransform>? slots)
+    public static int ShowFakePlayers(RectArray? slots)
     {
         int want = FakePlayers;
         if (want <= 0 || slots == null) return 0;
@@ -275,7 +267,7 @@ public static class LobbySize
     }
 
     /// <summary>Lays the shown slots out as rows of 20; returns how many players aren't shown.</summary>
-    public static int FitRow(Il2CppReferenceArray<RectTransform>? slots)
+    public static int FitRow(RectArray? slots)
     {
         if (_grid == null || slots == null) return 0;
         int active = 0;

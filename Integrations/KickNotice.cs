@@ -3,13 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using HarmonyLib;
-using Il2CppFishNet.Connection;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Networking;
-using Il2CppScheduleOne.Persistence;
-using Il2CppScheduleOne.UI.MainMenu;
-using Il2CppSteamworks;
 using MelonLoader;
 using UnityEngine;
 
@@ -88,7 +81,7 @@ public static class KickNotice
             // stays out of it; the kind and length are all the banned player's popup needs.
             // (Receivers still accept an optional 4th field from older versions of the mod.)
             var bytes = Encoding.ASCII.GetBytes($"{Prefix}{steamId}|{kind.ToString().ToLowerInvariant()}|{secs}");
-            var buf = new Il2CppStructArray<byte>(bytes.Length + 1);
+            var buf = Shim.Bytes(bytes.Length + 1);
             for (int i = 0; i < bytes.Length; i++) buf[i] = bytes[i];
             SteamMatchmaking.SendLobbyChatMsg(lobby, buf, buf.Length);
             Utils.Log.Info($"Sent {kind} notice to {steamId}");
@@ -175,7 +168,7 @@ public static class KickNotice
             ulong owner = SteamMatchmaking.GetLobbyOwner(lobby).m_SteamID;
             if (result.m_ulSteamIDUser != owner || owner == me) return; // only the host's word counts
 
-            var buf = new Il2CppStructArray<byte>(256);
+            var buf = Shim.Bytes(256);
             int n = SteamMatchmaking.GetLobbyChatEntry(lobby, (int)result.m_iChatID, out _, buf, buf.Length, out _);
             if (n <= Prefix.Length) return;
             if (n > buf.Length) n = buf.Length;

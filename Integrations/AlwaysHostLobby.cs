@@ -1,11 +1,6 @@
 using System;
 using System.Collections;
 using HarmonyLib;
-using Il2Cpp;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Networking;
-using Il2CppScheduleOne.Persistence;
-using Il2CppSteamworks;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
@@ -147,7 +142,7 @@ public static class AlwaysHostLobby
                 var lobby = Singleton<Lobby>.Instance;
                 if (lobby != null)
                 {
-                    var svc = lobby._lobbyService?.TryCast<SteamLobbyService>();
+                    var svc = lobby._lobbyService.As<SteamLobbyService>();
                     inLobby = lobby.IsInLobby || (svc != null && svc.IsInLobby);
                 }
             }

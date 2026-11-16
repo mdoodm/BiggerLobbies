@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Il2CppSteamworks;
 
 namespace BiggerLobbies.Integrations;
 

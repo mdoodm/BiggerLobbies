@@ -1,7 +1,5 @@
 using System;
 using HarmonyLib;
-using Il2CppScheduleOne.Networking;
-using Il2CppSteamworks;
 using MelonLoader;
 using UnityEngine;
 

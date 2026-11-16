@@ -1,7 +1,4 @@
 using System;
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Networking;
-using Il2CppSteamworks;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
@@ -12,7 +9,7 @@ public static class HostLobby
 {
     public static SteamLobbyService? Service()
     {
-        try { return Singleton<Lobby>.Instance?._lobbyService?.TryCast<SteamLobbyService>(); }
+        try { return Singleton<Lobby>.Instance?._lobbyService.As<SteamLobbyService>(); }
         catch { return null; }
     }
 

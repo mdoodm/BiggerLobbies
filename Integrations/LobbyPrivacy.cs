@@ -1,6 +1,5 @@
 using System;
 using HarmonyLib;
-using Il2CppSteamworks;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
@@ -62,12 +61,12 @@ public static class LobbyPrivacy
     // (Player.SetPlayerNameAndId_Server -> PlatformFriends.IsLocalPlayerFriendsWith, its only
     // caller). With an Open lobby, strangers are meant to get in, so skip that check; the
     // whitelist and blacklist still apply at login.
-    [HarmonyPrefix, HarmonyPatch(typeof(Il2CppScheduleOne.Platform.PlatformFriends), nameof(Il2CppScheduleOne.Platform.PlatformFriends.IsLocalPlayerFriendsWith))]
+    [HarmonyPrefix, HarmonyPatch(typeof(PlatformFriends), nameof(PlatformFriends.IsLocalPlayerFriendsWith))]
     private static bool IsLocalPlayerFriendsWith_Prefix(ref bool __result)
     {
         if (Current != Mode.Open) return true;
         // Only the host's server runs the kick check; a client calling this must get the real answer.
-        try { if (!Il2CppFishNet.InstanceFinder.IsServer) return true; } catch { return true; }
+        try { if (!InstanceFinder.IsServer) return true; } catch { return true; }
         __result = true;
         return false;
     }

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using Il2CppSteamworks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -76,7 +74,7 @@ public static class Avatars
             }
             if (!SteamUtils.GetImageSize(handle, out uint w, out uint h) || w == 0 || h == 0) return null;
             int size = (int)(w * h * 4);
-            var buf = new Il2CppStructArray<byte>(size);
+            var buf = Shim.Bytes(size);
             if (!SteamUtils.GetImageRGBA(handle, buf, size)) return null;
             var tex = new Texture2D((int)w, (int)h, TextureFormat.RGBA32, false);
             tex.LoadRawTextureData(buf);

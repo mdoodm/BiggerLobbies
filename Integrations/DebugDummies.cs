@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Il2CppScheduleOne.PlayerScripts;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.SceneManagement;

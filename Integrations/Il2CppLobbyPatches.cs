@@ -1,9 +1,5 @@
 using System;
 using HarmonyLib;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using Il2CppScheduleOne.Networking;
-using Il2CppScheduleOne.UI.Multiplayer;
-using Il2CppSteamworks;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.UI;
@@ -41,7 +37,7 @@ public static class LobbyHarmonyPatches
             }
 
             // In a lobby and past the vanilla 4-player limit: open the invite UI directly.
-            var svc = __instance._lobbyService?.TryCast<SteamLobbyService>();
+            var svc = __instance._lobbyService.As<SteamLobbyService>();
             if (svc == null) return true;
             svc.OpenInviteUI();
             return false;
@@ -61,7 +57,7 @@ public static class LobbyHarmonyPatches
         // this machine's setting, and the game writes _players[i] for every member unchecked.
         var players = svc._players;
         if (players != null && players.Length >= LobbySize.Max) return;
-        var arr = new Il2CppStructArray<CSteamID>(LobbySize.Max);
+        var arr = Shim.SteamIds(LobbySize.Max);
         if (players != null)
             for (int i = 0; i < players.Length; i++) arr[i] = players[i];
         svc._players = arr;
@@ -153,7 +149,7 @@ public static class LobbyHarmonyPatches
         LobbySize.RememberGrid(grid);
 
         int slotCount = entries.childCount - 1;
-        var slots = new Il2CppReferenceArray<RectTransform>(slotCount);
+        var slots = Shim.Rects(slotCount);
         for (int j = 1; j < entries.childCount; j++)
             slots[j - 1] = entries.GetChild(j).GetComponent<RectTransform>();
         ui.PlayerSlots = slots;
@@ -170,7 +166,7 @@ public static class LobbyHarmonyPatches
         ui.LobbyTitle.text = $"Lobby ({ui.Lobby.PlayerCount + fake}/{LobbySize.MaxPlayers}){more}{test}";
     }
 
-    private static int CountActive(Il2CppReferenceArray<RectTransform>? slots)
+    private static int CountActive(RectArray? slots)
     {
         int n = 0;
         if (slots != null)

@@ -1,11 +1,6 @@
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
-using Il2CppFishNet;
-using Il2CppScheduleOne.Growing;
-using Il2CppScheduleOne.ItemFramework;
-using Il2CppScheduleOne.NPCs.Behaviour;
-using Il2CppScheduleOne.ObjectScripts;
 using MelonLoader;
 
 namespace BiggerLobbies.Integrations;
