@@ -6,12 +6,15 @@ using BiggerLobbies.Utils;
 using MelonLoader;
 using Constants = BiggerLobbies.Utils.Constants; // Steamworks has a Constants class too
 
-[assembly: MelonInfo(typeof(BiggerLobbies.Core), Constants.MOD_NAME, Constants.MOD_VERSION, Constants.MOD_AUTHOR)]
+[assembly: MelonInfo(typeof(BiggerLobbies.Core), Constants.MELON_NAME, Constants.MOD_VERSION, Constants.MOD_AUTHOR)]
 [assembly: MelonGame(Constants.Game.GAME_STUDIO, Constants.Game.GAME_NAME)]
 [assembly: MelonIncompatibleAssemblies("ModManager&PhoneApp")]
 // Each build declares its backend so MelonLoader skips the other build's DLL before any of its code runs.
 #if MONO
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.MONO)]
+// These are named Il2Cpp* on the default branch. Without this, MelonLoader warns there that the
+// Mono DLL is missing them (and says that warning will become a load error in later versions).
+[assembly: MelonOptionalDependencies("FishNet.Runtime", "com.rlabrecque.steamworks.net", "ScheduleOne.Core")]
 #else
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.IL2CPP)]
 #endif

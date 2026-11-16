@@ -6,6 +6,14 @@
         /// Mod information
         /// </summary>
         public const string MOD_NAME = "BiggerLobbies";
+        /// <summary>The name MelonLoader shows. Each build needs its own: MelonLoader sorts mods by
+        /// this name, and a second mod with the same name is dropped before its backend is checked,
+        /// so with both DLLs in Mods whichever loaded first would win, even the wrong one.</summary>
+#if MONO
+        public const string MELON_NAME = MOD_NAME + " (Mono)";
+#else
+        public const string MELON_NAME = MOD_NAME;
+#endif
         public const string MOD_VERSION = "2.0.3";
         public const string MOD_AUTHOR = "Bars";
 

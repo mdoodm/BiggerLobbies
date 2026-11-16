@@ -31,7 +31,8 @@ public static class ModHandshake
     private static MelonPreferences_Entry<string>? _ignored;
     private static readonly Dictionary<ulong, Hello> _hellos = new();
     private static readonly HashSet<ulong> _warned = new();
-    private static readonly string[] IgnoredBuiltIn = { "BiggerLobbies", "MLVScan" };
+    // Both builds' names: the Mono build shows as "BiggerLobbies (Mono)".
+    private static readonly string[] IgnoredBuiltIn = { "BiggerLobbies", "BiggerLobbies (Mono)", "MLVScan" };
 
     public static void Init(MelonPreferences_Category cat)
     {
@@ -103,7 +104,8 @@ public static class ModHandshake
             foreach (var m in MelonMod.RegisteredMelons)
             {
                 string n = Clean(m?.Info?.Name);
-                if (n.Length == 0 || string.Equals(n, Utils.Constants.MOD_NAME, StringComparison.OrdinalIgnoreCase)) continue;
+                if (n.Length == 0 || string.Equals(n, Utils.Constants.MOD_NAME, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(n, Utils.Constants.MELON_NAME, StringComparison.OrdinalIgnoreCase)) continue;
                 if (!list.Contains(n, StringComparer.OrdinalIgnoreCase)) list.Add(n);
             }
         }
